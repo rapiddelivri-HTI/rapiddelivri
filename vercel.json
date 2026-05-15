@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "routes": [
+    { "src": "/api/rapiddelivri-checkout", "dest": "/api/checkout.js" },
+    { "src": "/auth", "dest": "/auth-system-FIXED.html" },
+    { "src": "/register", "dest": "/auth-system-FIXED.html" },
+    { "src": "/login", "dest": "/auth-system-FIXED.html" },
+    { "src": "/", "dest": "/index.html" },
+    { "src": "/(.*)", "dest": "/$1" }
+  ]
+}
