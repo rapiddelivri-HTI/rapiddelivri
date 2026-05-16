@@ -788,7 +788,83 @@ function detectLang() {
     }
 
     // ─── MAIN APP ─────────────────────────────────────────────────────────────
-    function App() {
+    function AdminPanel({ onLogout }) {
+  return (
+    <div style={{
+      padding: 20,
+      color: "#fff",
+      minHeight: "100vh",
+      background: "linear-gradient(160deg,#003F87 0%,#002D63 45%,#D01C1F 100%)",
+      fontFamily: "DM Sans"
+    }}>
+
+      <div style={{
+        textAlign: "center",
+        marginBottom: 30
+      }}>
+        <img
+          src="/logo-192.png"
+          style={{
+            width: 90,
+            height: 90,
+            borderRadius: 20,
+            marginBottom: 10
+          }}
+        />
+
+        <h1>Rapid Delivri Admin</h1>
+        <p>Dashboard Administratè</p>
+      </div>
+
+      <div style={{
+        background: "rgba(255,255,255,0.1)",
+        padding: 20,
+        borderRadius: 20,
+        marginBottom: 20
+      }}>
+        <h2>👥 Users</h2>
+        <p>Jere kliyan, chofè ak restoran</p>
+      </div>
+
+      <div style={{
+        background: "rgba(255,255,255,0.1)",
+        padding: 20,
+        borderRadius: 20,
+        marginBottom: 20
+      }}>
+        <h2>🍽 Restaurants</h2>
+        <p>Approve oswa retire restoran</p>
+      </div>
+
+      <div style={{
+        background: "rgba(255,255,255,0.1)",
+        padding: 20,
+        borderRadius: 20,
+        marginBottom: 20
+      }}>
+        <h2>🚗 Drivers</h2>
+        <p>Verifye dokiman chofè yo</p>
+      </div>
+
+      <button
+        onClick={onLogout}
+        style={{
+          width: "100%",
+          padding: 16,
+          border: "none",
+          borderRadius: 16,
+          background: "#FFD700",
+          color: "#000",
+          fontWeight: 800,
+          cursor: "pointer"
+        }}
+      >
+        Dekonekte
+      </button>
+
+    </div>
+  );
+}function App() {
       const [screen, setScreen] = useState("home");
       const [currentUser, setCurrentUser] = useState(null);
       const [userRole, setUserRole] = useState(null);
