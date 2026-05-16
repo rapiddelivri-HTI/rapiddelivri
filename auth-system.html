@@ -12,482 +12,772 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: "DM Sans", sans-serif; background: #EEF2FF; min-height: 100vh; }
-    ::-webkit-scrollbar { width: 4px; }
-    ::-webkit-scrollbar-thumb { background: #003F87; border-radius: 4px; }
-    @keyframes slideUp { from{transform:translateY(20px);opacity:0} to{transform:translateY(0);opacity:1} }
-    .slide-up { animation: slideUp 0.3s ease forwards; }
+    button:disabled { opacity: .65; cursor: not-allowed; }
   </style>
 </head>
 <body>
-  <div id="root"></div>
-  <script type="text/babel">
-    const { useState, useRef, useEffect } = React;
+<div id="root"></div>
 
-    const SUPABASE_URL = "https://rhtbmqixkpkhubmkfefx.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJodGJtcWl4a3BraHVibWtmZWZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NTM3NjYsImV4cCI6MjA5MzAyOTc2Nn0.23EJqlFpgauW_iDCYkywCnCzH9QL_Y-Nz_hlD10VN2A";
-    
-    let supabase = null;
-    
-    // Initialize Supabase with error handling
-    const initSupabase = () => {
-      try {
-        if (window.supabase && window.supabase.createClient) {
-          supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-          console.log("✅ Supabase initialized successfully");
-          return true;
-        } else {
-          console.error("❌ Supabase library not loaded");
-          return false;
-        }
-      } catch (err) {
-        console.error("❌ Supabase init error:", err);
-        return false;
+<script type="text/babel">
+const { useState, useRef, useEffect } = React;
+
+const SUPABASE_URL = "https://rhtbmqixkpkhubmkfefx.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJodGJtcWl4a3BraHVibWtmZWZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NTM3NjYsImV4cCI6MjA5MzAyOTc2Nn0.23EJqlFpgauW_iDCYkywCnCzH9QL_Y-Nz_hlD10VN2A";
+
+let supabase = null;
+
+function initSupabase() {
+  try {
+    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    return true;
+  } catch (err) {
+    console.error(err);
+    return false;
+  }
+}
+
+const T = {
+  primary: "#003F87",
+  primaryDark: "#002D63",
+  accent: "#D01C1F",
+  green: "#16A34A",
+  text: "#0D1B3E",
+  muted: "#6B7893",
+  border: "#E2E6F0",
+  surface: "#F8FAFF"
+};
+
+const inputStyle = {
+  background: T.surface,
+  border: `1px solid ${T.border}`,
+  borderRadius: 10,
+  padding: "13px 14px",
+  color: T.text,
+  fontSize: 14,
+  width: "100%",
+  fontFamily: "DM Sans",
+  outline: "none"
+};
+
+const buttonStyle = (bg, color = "#fff") => ({
+  background: bg,
+  color,
+  border: "none",
+  borderRadius: 14,
+  padding: "16px",
+  fontSize: 16,
+  fontWeight: 800,
+  width: "100%",
+  cursor: "pointer",
+  fontFamily: "DM Sans",
+  marginTop: 8
+});
+
+function Header({ title, onBack }) {
+  return (
+    <div style={{ background: `linear-gradient(135deg, ${T.primary}, ${T.primaryDark})`, padding: "18px 20px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        {onBack && <button onClick={onBack} style={{ background: "none", border: "none", color: "#fff", fontSize: 24, cursor: "pointer" }}>←</button>}
+        <div style={{ width: 40, height: 40, borderRadius: "50%", background: "#FFD700", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, color: T.primary }}>RD</div>
+        <div style={{ fontSize: 18, fontWeight: 900, color: "#fff" }}>{title}</div>
+      </div>
+    </div>
+  );
+}
+
+function Field({ label, value, onChange, type = "text", placeholder = "", error = "", disabled = false }) {
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <div style={{ fontSize: 11, color: T.muted, fontWeight: 800, letterSpacing: ".7px", textTransform: "uppercase", marginBottom: 6 }}>{label}</div>
+      <input
+        style={{ ...inputStyle, borderColor: error ? T.accent : T.border }}
+        type={type}
+        placeholder={placeholder}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        disabled={disabled}
+      />
+      {error && <div style={{ color: T.accent, fontSize: 12, marginTop: 4 }}>{error}</div>}
+    </div>
+  );
+}
+
+function FileUpload({ label, bucket, path, onUpload, accept = "image/*" }) {
+  const [uploading, setUploading] = useState(false);
+  const [done, setDone] = useState(false);
+  const ref = useRef();
+
+  const handle = async (e) => {
+    const file = e.target.files[0];
+    if (!file || !supabase) return;
+
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const fp = `${path}-${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from(bucket).upload(fp, file, { upsert: false });
+      if (error) throw error;
+
+      const { data } = supabase.storage.from(bucket).getPublicUrl(fp);
+      setDone(true);
+      onUpload(data.publicUrl || fp);
+    } catch (err) {
+      alert("Upload failed: " + err.message);
+    }
+    setUploading(false);
+  };
+
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <div style={{ fontSize: 11, color: T.muted, fontWeight: 800, letterSpacing: ".7px", textTransform: "uppercase", marginBottom: 6 }}>{label}</div>
+      <div onClick={() => ref.current?.click()} style={{ border: `2px dashed ${done ? T.green : T.border}`, borderRadius: 10, padding: 16, textAlign: "center", cursor: "pointer", background: T.surface }}>
+        <input ref={ref} type="file" accept={accept} style={{ display: "none" }} onChange={handle} />
+        {uploading ? "⏳ Uploading..." : done ? "✅ Uploaded" : `📎 Upload ${label}`}
+      </div>
+    </div>
+  );
+}
+
+async function uniqueCheck(table, email, phone) {
+  const { data: existingEmail } = await supabase.from(table).select("id").eq("email", email).maybeSingle();
+  if (existingEmail) throw new Error("Email sa deja gen kont");
+
+  if (phone) {
+    const { data: existingPhone } = await supabase.from(table).select("id").eq("phone", phone).maybeSingle();
+    if (existingPhone) throw new Error("Numero sa deja itilize");
+  }
+}
+
+async function createAuthAccount(email, password, role, extraData = {}) {
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: { data: { role, ...extraData } }
+  });
+  if (error) throw error;
+  return data.user;
+}
+
+async function insertProfile(user, payload) {
+  const profile = {
+    id: user.id,
+    email: payload.email,
+    phone: payload.phone,
+    full_name: payload.full_name,
+    role: payload.role,
+    status: "pending"
+  };
+
+  await supabase.from("profiles").insert([profile]);
+}
+
+function CustomerRegister({ onBack }) {
+  const [form, setForm] = useState({
+    email: "", password: "", confirmPassword: "",
+    first_name: "", last_name: "", phone: "",
+    address: "", apartment: "", city: "", state: "IN", zip: "",
+    id_document_type: "state_id"
+  });
+
+  const [idUrl, setIdUrl] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
+
+  const set = (k, v) => {
+    setForm(p => ({ ...p, [k]: v }));
+    setErrors(p => ({ ...p, [k]: "" }));
+  };
+
+  const validate = () => {
+    const e = {};
+    if (!form.first_name) e.first_name = "Prenon obligatwa";
+    if (!form.last_name) e.last_name = "Non obligatwa";
+    if (!form.email) e.email = "Email obligatwa";
+    if (!form.phone) e.phone = "Numero obligatwa";
+    if (!form.password) e.password = "Password obligatwa";
+    if (form.password && form.password.length < 6) e.password = "Omwen 6 karaktè";
+    if (form.password !== form.confirmPassword) e.confirmPassword = "Password pa matche";
+    if (!form.address) e.address = "Adres obligatwa";
+    if (!form.city) e.city = "Vil obligatwa";
+    if (!form.zip) e.zip = "ZIP obligatwa";
+    if (!idUrl) e.id = "ID / lisans / paspò obligatwa";
+    return e;
+  };
+
+  const submit = async () => {
+    const e = validate();
+    if (Object.keys(e).length > 0) {
+      setErrors(e);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await uniqueCheck("customers", form.email, form.phone);
+
+      const user = await createAuthAccount(form.email, form.password, "customer", {
+        first_name: form.first_name,
+        last_name: form.last_name
+      });
+
+      const customerRow = {
+        auth_user_id: user.id,
+        email: form.email,
+        first_name: form.first_name,
+        last_name: form.last_name,
+        phone: form.phone,
+        address: form.address,
+        apartment: form.apartment,
+        city: form.city,
+        state: form.state,
+        zip: form.zip,
+        id_document_url: idUrl,
+        id_document_type: form.id_document_type,
+        status: "pending",
+        is_verified: false,
+        is_active: true
+      };
+
+      const { error: dbError } = await supabase.from("customers").insert([customerRow]);
+      if (dbError) throw dbError;
+
+      await insertProfile(user, {
+        email: form.email,
+        phone: form.phone,
+        full_name: `${form.first_name} ${form.last_name}`,
+        role: "customer"
+      });
+
+      await supabase.from("admin_approvals").insert([{
+        applicant_id: user.id,
+        applicant_type: "customer",
+        applicant_name: `${form.first_name} ${form.last_name}`,
+        status: "pending"
+      }]);
+
+      alert("✅ Kont kreye! Admin ap verifye kont ou.");
+      window.location.href = "/auth";
+    } catch (err) {
+      alert("Erè: " + err.message);
+    }
+    setLoading(false);
+  };
+
+  return (
+    <Page title="👤 Kreye Kont Kliyan" onBack={onBack}>
+      <Card title="📋 Enfòmasyon Pèsonèl" color={T.primary}>
+        <Field label="Prenon" value={form.first_name} onChange={v => set("first_name", v)} error={errors.first_name} disabled={loading}/>
+        <Field label="Non Fanmi" value={form.last_name} onChange={v => set("last_name", v)} error={errors.last_name} disabled={loading}/>
+        <Field label="Email" value={form.email} onChange={v => set("email", v)} type="email" error={errors.email} disabled={loading}/>
+        <Field label="Telefòn" value={form.phone} onChange={v => set("phone", v)} type="tel" error={errors.phone} disabled={loading}/>
+      </Card>
+
+      <Card title="🔐 Sekirite" color={T.primary}>
+        <Field label="Password" value={form.password} onChange={v => set("password", v)} type="password" error={errors.password} disabled={loading}/>
+        <Field label="Confirm Password" value={form.confirmPassword} onChange={v => set("confirmPassword", v)} type="password" error={errors.confirmPassword} disabled={loading}/>
+      </Card>
+
+      <Card title="📍 Adres" color={T.primary}>
+        <Field label="Adres" value={form.address} onChange={v => set("address", v)} error={errors.address} disabled={loading}/>
+        <Field label="Apt / Suite" value={form.apartment} onChange={v => set("apartment", v)} disabled={loading}/>
+        <Field label="Vil" value={form.city} onChange={v => set("city", v)} error={errors.city} disabled={loading}/>
+        <Field label="ZIP" value={form.zip} onChange={v => set("zip", v)} error={errors.zip} disabled={loading}/>
+      </Card>
+
+      <Card title="🪪 Verifikasyon ID" color={T.primary}>
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 11, color: T.muted, fontWeight: 800, textTransform: "uppercase", marginBottom: 6 }}>Tip ID</div>
+          <select style={inputStyle} value={form.id_document_type} onChange={e => set("id_document_type", e.target.value)} disabled={loading}>
+            <option value="state_id">State ID</option>
+            <option value="license">Lisans Kondwi</option>
+            <option value="passport">Paspò</option>
+          </select>
+        </div>
+        <FileUpload label="Foto ID / Lisans / Paspò" bucket="customer-documents" path="customer-id" onUpload={setIdUrl}/>
+        {errors.id && <div style={{ color: T.accent, fontSize: 12 }}>{errors.id}</div>}
+      </Card>
+
+      <button style={buttonStyle(`linear-gradient(135deg,${T.primary},${T.primaryDark})`)} onClick={submit} disabled={loading}>
+        {loading ? "⏳ Ap kreye kont..." : "✅ Kreye Kont Mwen"}
+      </button>
+    </Page>
+  );
+}
+
+function DriverRegister({ onBack }) {
+  const [form, setForm] = useState({
+    email: "", password: "", confirmPassword: "",
+    first_name: "", last_name: "", phone: "",
+    address: "", apartment: "", city: "", state: "IN", zip: "",
+    vehicle_make: "", vehicle_model: "", vehicle_year: "", vehicle_color: "", vehicle_plate: ""
+  });
+
+  const [docs, setDocs] = useState({ id: "", license: "", registration: "", insurance: "", selfie: "" });
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
+
+  const set = (k, v) => {
+    setForm(p => ({ ...p, [k]: v }));
+    setErrors(p => ({ ...p, [k]: "" }));
+  };
+
+  const validate = () => {
+    const e = {};
+    if (!form.first_name) e.first_name = "Prenon obligatwa";
+    if (!form.last_name) e.last_name = "Non obligatwa";
+    if (!form.email) e.email = "Email obligatwa";
+    if (!form.phone) e.phone = "Telefòn obligatwa";
+    if (!form.password || form.password.length < 6) e.password = "Omwen 6 karaktè";
+    if (form.password !== form.confirmPassword) e.confirmPassword = "Password pa matche";
+    if (!form.address) e.address = "Adres obligatwa";
+    if (!form.city) e.city = "Vil obligatwa";
+    if (!form.zip) e.zip = "ZIP obligatwa";
+    if (!form.vehicle_plate) e.vehicle_plate = "Plak obligatwa";
+    if (!docs.id) e.id = "ID / paspò obligatwa";
+    if (!docs.license) e.license = "Lisans obligatwa";
+    if (!docs.registration) e.registration = "Registration obligatwa";
+    if (!docs.insurance) e.insurance = "Asirans obligatwa";
+    if (!docs.selfie) e.selfie = "Selfie obligatwa";
+    return e;
+  };
+
+  const submit = async () => {
+    const e = validate();
+    if (Object.keys(e).length > 0) {
+      setErrors(e);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await uniqueCheck("drivers", form.email, form.phone);
+
+      const user = await createAuthAccount(form.email, form.password, "driver");
+
+      const driverRow = {
+        auth_user_id: user.id,
+        email: form.email,
+        first_name: form.first_name,
+        last_name: form.last_name,
+        phone: form.phone,
+        address: form.address,
+        apartment: form.apartment,
+        city: form.city,
+        state: form.state,
+        zip: form.zip,
+        government_id_url: docs.id,
+        government_id_type: "driver_license",
+        drivers_license_url: docs.license,
+        driver_license_url: docs.license,
+        vehicle_registration_url: docs.registration,
+        vehicle_insurance_url: docs.insurance,
+        selfie_url: docs.selfie,
+        vehicle_make: form.vehicle_make,
+        vehicle_model: form.vehicle_model,
+        vehicle_year: form.vehicle_year,
+        vehicle_color: form.vehicle_color,
+        vehicle_plate: form.vehicle_plate,
+        status: "pending",
+        is_approved: false,
+        is_active: false,
+        is_online: false
+      };
+
+      const { error: dbError } = await supabase.from("drivers").insert([driverRow]);
+      if (dbError) throw dbError;
+
+      await insertProfile(user, {
+        email: form.email,
+        phone: form.phone,
+        full_name: `${form.first_name} ${form.last_name}`,
+        role: "driver"
+      });
+
+      await supabase.from("admin_approvals").insert([{
+        applicant_id: user.id,
+        applicant_type: "driver",
+        applicant_name: `${form.first_name} ${form.last_name}`,
+        status: "pending"
+      }]);
+
+      alert("✅ Aplikasyon soumèt! Admin ap verifye dokiman yo.");
+      window.location.href = "/auth";
+    } catch (err) {
+      alert("Erè: " + err.message);
+    }
+    setLoading(false);
+  };
+
+  return (
+    <Page title="🚗 Enskripsyon Chofè" onBack={onBack}>
+      <Card title="📋 Enfòmasyon Pèsonèl" color={T.accent}>
+        <Field label="Prenon" value={form.first_name} onChange={v => set("first_name", v)} error={errors.first_name} disabled={loading}/>
+        <Field label="Non Fanmi" value={form.last_name} onChange={v => set("last_name", v)} error={errors.last_name} disabled={loading}/>
+        <Field label="Email" value={form.email} onChange={v => set("email", v)} type="email" error={errors.email} disabled={loading}/>
+        <Field label="Telefòn" value={form.phone} onChange={v => set("phone", v)} type="tel" error={errors.phone} disabled={loading}/>
+      </Card>
+
+      <Card title="🔐 Sekirite" color={T.accent}>
+        <Field label="Password" value={form.password} onChange={v => set("password", v)} type="password" error={errors.password} disabled={loading}/>
+        <Field label="Confirm Password" value={form.confirmPassword} onChange={v => set("confirmPassword", v)} type="password" error={errors.confirmPassword} disabled={loading}/>
+      </Card>
+
+      <Card title="📍 Adres" color={T.accent}>
+        <Field label="Adres" value={form.address} onChange={v => set("address", v)} error={errors.address} disabled={loading}/>
+        <Field label="Apt / Suite" value={form.apartment} onChange={v => set("apartment", v)} disabled={loading}/>
+        <Field label="Vil" value={form.city} onChange={v => set("city", v)} error={errors.city} disabled={loading}/>
+        <Field label="ZIP" value={form.zip} onChange={v => set("zip", v)} error={errors.zip} disabled={loading}/>
+      </Card>
+
+      <Card title="🚙 Machin" color={T.accent}>
+        <Field label="Make" value={form.vehicle_make} onChange={v => set("vehicle_make", v)} disabled={loading}/>
+        <Field label="Model" value={form.vehicle_model} onChange={v => set("vehicle_model", v)} disabled={loading}/>
+        <Field label="Year" value={form.vehicle_year} onChange={v => set("vehicle_year", v)} disabled={loading}/>
+        <Field label="Color" value={form.vehicle_color} onChange={v => set("vehicle_color", v)} disabled={loading}/>
+        <Field label="Plate" value={form.vehicle_plate} onChange={v => set("vehicle_plate", v)} error={errors.vehicle_plate} disabled={loading}/>
+      </Card>
+
+      <Card title="📄 Dokiman Obligatwa" color={T.accent}>
+        <FileUpload label="ID / Paspò" bucket="driver-documents" path="government-id" onUpload={u => setDocs(p => ({...p, id: u}))}/>
+        {errors.id && <ErrorText text={errors.id}/>}
+        <FileUpload label="Lisans Kondwi" bucket="driver-documents" path="license" onUpload={u => setDocs(p => ({...p, license: u}))}/>
+        {errors.license && <ErrorText text={errors.license}/>}
+        <FileUpload label="Registration Machin" bucket="driver-documents" path="registration" onUpload={u => setDocs(p => ({...p, registration: u}))}/>
+        {errors.registration && <ErrorText text={errors.registration}/>}
+        <FileUpload label="Asirans Machin" bucket="driver-documents" path="insurance" onUpload={u => setDocs(p => ({...p, insurance: u}))}/>
+        {errors.insurance && <ErrorText text={errors.insurance}/>}
+        <FileUpload label="Selfie" bucket="driver-selfies" path="selfie" onUpload={u => setDocs(p => ({...p, selfie: u}))}/>
+        {errors.selfie && <ErrorText text={errors.selfie}/>}
+      </Card>
+
+      <button style={buttonStyle(`linear-gradient(135deg,${T.accent},#A81518)`)} onClick={submit} disabled={loading}>
+        {loading ? "⏳ Ap soumèt..." : "🚗 Soumèt Aplikasyon"}
+      </button>
+    </Page>
+  );
+}
+
+function RestaurantRegister({ onBack }) {
+  const [form, setForm] = useState({
+    restaurant_name: "", owner_name: "", email: "", password: "", confirmPassword: "",
+    phone: "", address: "", apartment: "", city: "", state: "IN", zip: "", ein_number: ""
+  });
+
+  const [docs, setDocs] = useState({ id: "", ein: "", menu: "", logo: "" });
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
+
+  const set = (k, v) => {
+    setForm(p => ({ ...p, [k]: v }));
+    setErrors(p => ({ ...p, [k]: "" }));
+  };
+
+  const validate = () => {
+    const e = {};
+    if (!form.restaurant_name) e.restaurant_name = "Non restoran obligatwa";
+    if (!form.owner_name) e.owner_name = "Non pwopriyetè obligatwa";
+    if (!form.email) e.email = "Email obligatwa";
+    if (!form.phone) e.phone = "Telefòn obligatwa";
+    if (!form.password || form.password.length < 6) e.password = "Omwen 6 karaktè";
+    if (form.password !== form.confirmPassword) e.confirmPassword = "Password pa matche";
+    if (!form.address) e.address = "Adres obligatwa";
+    if (!form.city) e.city = "Vil obligatwa";
+    if (!form.zip) e.zip = "ZIP obligatwa";
+    if (!form.ein_number) e.ein_number = "EIN obligatwa";
+    if (!docs.id) e.id = "ID / lisans / paspò obligatwa";
+    if (!docs.ein) e.ein = "Dokiman EIN obligatwa";
+    if (!docs.menu) e.menu = "Menu obligatwa";
+    return e;
+  };
+
+  const submit = async () => {
+    const e = validate();
+    if (Object.keys(e).length > 0) {
+      setErrors(e);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await uniqueCheck("restaurants", form.email, form.phone);
+
+      const user = await createAuthAccount(form.email, form.password, "restaurant");
+
+      const restaurantRow = {
+        auth_user_id: user.id,
+        restaurant_name: form.restaurant_name,
+        owner_name: form.owner_name,
+        email: form.email,
+        phone: form.phone,
+        address: form.address,
+        apartment: form.apartment,
+        city: form.city,
+        state: form.state,
+        zip: form.zip,
+        government_id_url: docs.id,
+        government_id_type: "state_id",
+        ein_number: form.ein_number,
+        ein_document_url: docs.ein,
+        menu_pdf_url: docs.menu,
+        logo_url: docs.logo,
+        status: "pending",
+        is_approved: false,
+        is_active: false,
+        is_open: false
+      };
+
+      const { error: dbError } = await supabase.from("restaurants").insert([restaurantRow]);
+      if (dbError) throw dbError;
+
+      await insertProfile(user, {
+        email: form.email,
+        phone: form.phone,
+        full_name: form.restaurant_name,
+        role: "restaurant"
+      });
+
+      await supabase.from("admin_approvals").insert([{
+        applicant_id: user.id,
+        applicant_type: "restaurant",
+        applicant_name: form.restaurant_name,
+        status: "pending"
+      }]);
+
+      alert("✅ Restoran soumèt! Admin ap verifye dokiman yo.");
+      window.location.href = "/auth";
+    } catch (err) {
+      alert("Erè: " + err.message);
+    }
+    setLoading(false);
+  };
+
+  return (
+    <Page title="🍴 Enskripsyon Restoran" onBack={onBack}>
+      <Card title="🏪 Enfòmasyon Restoran" color="#1a6b3a">
+        <Field label="Non Restoran" value={form.restaurant_name} onChange={v => set("restaurant_name", v)} error={errors.restaurant_name} disabled={loading}/>
+        <Field label="Owner Name" value={form.owner_name} onChange={v => set("owner_name", v)} error={errors.owner_name} disabled={loading}/>
+        <Field label="Email" value={form.email} onChange={v => set("email", v)} type="email" error={errors.email} disabled={loading}/>
+        <Field label="Telefòn" value={form.phone} onChange={v => set("phone", v)} type="tel" error={errors.phone} disabled={loading}/>
+      </Card>
+
+      <Card title="🔐 Sekirite" color="#1a6b3a">
+        <Field label="Password" value={form.password} onChange={v => set("password", v)} type="password" error={errors.password} disabled={loading}/>
+        <Field label="Confirm Password" value={form.confirmPassword} onChange={v => set("confirmPassword", v)} type="password" error={errors.confirmPassword} disabled={loading}/>
+      </Card>
+
+      <Card title="📍 Adres Restoran" color="#1a6b3a">
+        <Field label="Adres" value={form.address} onChange={v => set("address", v)} error={errors.address} disabled={loading}/>
+        <Field label="Apt / Suite" value={form.apartment} onChange={v => set("apartment", v)} disabled={loading}/>
+        <Field label="Vil" value={form.city} onChange={v => set("city", v)} error={errors.city} disabled={loading}/>
+        <Field label="ZIP" value={form.zip} onChange={v => set("zip", v)} error={errors.zip} disabled={loading}/>
+      </Card>
+
+      <Card title="💼 EIN" color="#1a6b3a">
+        <Field label="EIN Number" value={form.ein_number} onChange={v => set("ein_number", v)} error={errors.ein_number} disabled={loading}/>
+      </Card>
+
+      <Card title="📄 Dokiman Obligatwa" color="#1a6b3a">
+        <FileUpload label="ID / Lisans / Paspò Owner" bucket="restaurant-documents" path="owner-id" onUpload={u => setDocs(p => ({...p, id: u}))}/>
+        {errors.id && <ErrorText text={errors.id}/>}
+        <FileUpload label="Dokiman EIN" bucket="restaurant-documents" path="ein-doc" accept=".pdf,image/*" onUpload={u => setDocs(p => ({...p, ein: u}))}/>
+        {errors.ein && <ErrorText text={errors.ein}/>}
+        <FileUpload label="Menu PDF" bucket="restaurant-documents" path="menu" accept=".pdf,image/*" onUpload={u => setDocs(p => ({...p, menu: u}))}/>
+        {errors.menu && <ErrorText text={errors.menu}/>}
+        <FileUpload label="Logo Restoran Opsyonèl" bucket="restaurant-documents" path="logo" onUpload={u => setDocs(p => ({...p, logo: u}))}/>
+      </Card>
+
+      <button style={buttonStyle("linear-gradient(135deg,#1a6b3a,#0d4a28)")} onClick={submit} disabled={loading}>
+        {loading ? "⏳ Ap soumèt..." : "🍴 Soumèt Aplikasyon"}
+      </button>
+    </Page>
+  );
+}
+
+function SignIn({ onBack, onForgot }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const login = async () => {
+    if (!email || !password) {
+      alert("Antre email ak password");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+
+      let profile = null;
+
+      const { data: p } = await supabase.from("profiles").select("*").eq("id", data.user.id).maybeSingle();
+      profile = p;
+
+      if (!profile) {
+        const { data: c } = await supabase.from("customers").select("*").eq("auth_user_id", data.user.id).maybeSingle();
+        if (c) profile = { role: "customer", status: c.status || (c.is_active ? "approved" : "pending") };
       }
-    };
 
-    const LOGO = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAYAAACtWK6eAAB5+ElEQVR42uydd5gdxZX2f6equ2+cPJJGOaCACARIeAnBByAo+EAEgXFk7qO76rjovg9GQclcMcxMJXd7u7rq/H3q/H85p8T+FUV7VW+b/2LJCtmqwdhaTi+u+726+ahnA/ClA5ZkF796btJ86NGS1irrQTZkJjd/gZOXnu6MVq9pj7vnONEqUGpKgWjFSzfyjDLgeFFCngRY9oGq96gKlYrn8kAVabq5PjW77jOG5N5ARepGGrULE7oKiAhqQnvscHm1XsFCE8CN0CLzrD+bLEWkjNmOsk/fuZx+8WHFv6GwyYO82ihquqkLBUZl3nc/xKdg7oxYXlhZjNY+2xXFC5wGDwwEk0p+7GqVVl7zFFe27pU8cDWCSf1YJEApDVS9/evFt5zv7ogU1wQQCRBpIxawGtMljSvMpUXvlwPaJgrWISKDZvJJyfP+ULJjexrenOPZfBhKjLCb+jhAbuzoWhAzdzrumd5YXlxS1LYn22O6lbQUjAuGSw2Jch1Fhh2rRrKozZVzkht1s/sRrk8Zk5wZs2HPsDyOaZXKVvufQJ1msongJ6kYQryvGvh4KC0fStLN51N9e4/3e8muGvCj0YBGK0DqZZm50Uzqgd6Fsd4zPZLnVrVFDy4uKPMiDUUlHfQmAwH14FTyo8wIwWL/sMDXA8ZrGb+NcCObb/3yZM3ZFEKbEHpUgiLRBQt6sBr4rJR+9X3grWNpuudAwhng56b5ter7Mg6QG8l2rQdeb6jxAH2PFvWBySqLe50+tbzNdSyKldtUECwpI1z0ppUs1pWYvxbNjNQC7H/cLBk2jwRIAhYLoVMI3SogEv/hA6eCsbPiS0eT8N5gCHvfLYX9JThQ8xYKrAb3QaO0Y9yD3KxAWQa6M+/+nYNlejcsX1p0988v6MzZSt+8yN3VFysznRALaSVgf5jJZUMtAwyaA0ZbCJgbtbm+9ssmHIpC6Mq1C8BdMuNYahyq+sFfvB0+Fzi0t5rs2pOwBThD/u7rIPoKbDQDY6wBpP6+y8Btg1AQQq6hRMAsYNHKgnusvyDzZzu9uzfWGfOdMi3K2JrU8FXDKmZSAvF5om+N0dFrfKVv1CYOf1az6BAM6xBCQcQKgrQJLjUYMOPbxDjl/Q+/BfvmSMLxj0rJ4Z8Ch4CDQCUWqBq6FtzGui44RgyGsTkE0DWZjpIUBUutvuvzgIcWF9wjK4o6a5GT2dMjnTPNiU4RYZKTuhcpZylKVrWMGaudxZsN1f3HixyutFbLRVEToEPEDCTOSAhNMJIg/GbGjz6ENHD6RAint5TD8U2ldFuA3cAJyPQNgJeNwmsNUNhYNJSxPgTQ/kyd53khMeo3sfQAS293svK+SPruLeqUOyPXPU2l51an0VQHBWpNCTJmKjXqLfwDRtJCuvXvwFGQrAVSLSZw+XzMMoVfgbPeuGzBTqV2/tfApSNJeu7Tcjh80ttnVdgOnFOy1iFVI1oLsrFBZoWxbhzjY1i8AsgmYA2EKMuPJSN3mAH03woremOds6rdLSwIbQsjV5gbSZc3tFMknqjEIRPcEWtcU9zqYU0MVwQhNZILwbwqSTAZ+rycpiaku0p+4GDq933t2UoWZB+reZtc1HN5TFGTWGzcDMYBcj3rIzU2jCstaCYwdQL03e7kiUuBWx4u6h39RTdv0KhMVtHHi8okkVqpaUu9R6fA7kqw/WlwncrFS8FOfjKUnj3rORGZbfsuq9QrA0eFXOgHXslDpqb2neOAuMr4E03PPs2a1wcEAAAAAElFTkSuQmCC";
-
-    const T = {
-      primary: "#003F87", primaryDark: "#002D63",
-      accent: "#D01C1F", green: "#16A34A",
-      text: "#0D1B3E", muted: "#6B7893",
-      border: "#E2E6F0", surface: "#F8FAFF",
-    };
-
-    const inp = {
-      background: T.surface, border: `1px solid ${T.border}`,
-      borderRadius: 10, padding: "13px 14px", color: T.text,
-      fontSize: 14, width: "100%", fontFamily: "DM Sans", outline: "none",
-      boxSizing: "border-box",
-    };
-
-    const btn = (bg, color="#fff") => ({
-      background: bg, color, border: "none", borderRadius: 14,
-      padding: "16px", fontSize: 16, fontWeight: 700, width: "100%",
-      cursor: "pointer", fontFamily: "DM Sans", marginTop: 8,
-    });
-
-    function Header({ title, onBack }) {
-      return (
-        <div style={{ background: `linear-gradient(135deg, ${T.primary}, ${T.primaryDark})`, padding: "16px 20px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            {onBack && <button onClick={onBack} style={{ background: "none", border: "none", color: "#fff", fontSize: 22, cursor: "pointer" }}>←</button>}
-            <img src={LOGO} style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover" }} />
-            <div style={{ fontSize: 17, fontWeight: 800, color: "#fff" }}>{title}</div>
-          </div>
-        </div>
-      );
-    }
-
-    function FileUpload({ label, bucket, path, onUpload, accept="image/*" }) {
-      const [uploading, setUploading] = useState(false);
-      const [done, setDone] = useState(false);
-      const ref = useRef();
-      const handle = async (e) => {
-        const file = e.target.files[0];
-        if (!file || !supabase) return;
-        setUploading(true);
-        try {
-          const ext = file.name.split(".").pop();
-          const fp = `${path}-${Date.now()}.${ext}`;
-          const { error } = await supabase.storage.from(bucket).upload(fp, file);
-          if (error) throw error;
-          const { data } = supabase.storage.from(bucket).getPublicUrl(fp);
-          setDone(true);
-          onUpload(data.publicUrl || fp);
-        } catch(err) { alert("Upload failed: " + err.message); }
-        setUploading(false);
-      };
-      return (
-        <div style={{ marginBottom: 14 }}>
-          <div style={{ fontSize: 11, color: T.muted, fontWeight: 700, letterSpacing: "0.8px", textTransform: "uppercase", marginBottom: 6 }}>{label}</div>
-          <div onClick={() => ref.current?.click()} style={{ border: `2px dashed ${done ? T.green : T.border}`, borderRadius: 10, padding: 16, textAlign: "center", cursor: "pointer", background: T.surface }}>
-            <input ref={ref} type="file" accept={accept} style={{ display: "none" }} onChange={handle} />
-            {uploading ? "⏳ Uploading..." : done ? "✅ Uploaded!" : `📎 Upload ${label}`}
-          </div>
-        </div>
-      );
-    }
-
-    function CustomerRegister({ onBack }) {
-      const [form, setForm] = useState({ email: "", password: "", confirmPassword: "", first_name: "", last_name: "", phone: "", address: "", apartment: "", city: "", state: "IN", zip: "", id_document_type: "state_id" });
-      const [idUrl, setIdUrl] = useState("");
-      const [loading, setLoading] = useState(false);
-      const [errors, setErrors] = useState({});
-
-      const set = (k, v) => { setForm(p => ({...p, [k]: v})); setErrors(p => ({...p, [k]: ""})); };
-
-      const submit = async () => {
-        const e = {};
-        if (!form.email) e.email = "Email obligatwa";
-        if (!form.password) e.password = "Password obligatwa";
-        if (form.password.length < 6) e.password = "Omwen 6 karaktè";
-        if (form.password !== form.confirmPassword) e.confirmPassword = "Password pa matche";
-        if (!form.first_name) e.first_name = "Prenon obligatwa";
-        if (!form.last_name) e.last_name = "Non obligatwa";
-        if (!form.address) e.address = "Adres obligatwa";
-        if (!form.city) e.city = "Vil obligatwa";
-        if (!form.zip) e.zip = "ZIP obligatwa";
-        if (!idUrl) e.id = "ID obligatwa";
-        if (Object.keys(e).length > 0) { setErrors(e); return; }
-        setLoading(true);
-        try {
-          if (!supabase) throw new Error("System not ready, refresh page");
-          const { data: authData, error: authError } = await supabase.auth.signUp({
-            email: form.email,
-            password: form.password,
-            options: { data: { role: "customer", first_name: form.first_name, last_name: form.last_name } }
-          });
-          if (authError) throw authError;
-
-          const { error: dbError } = await supabase.from("customers").insert([{
-            email: form.email, first_name: form.first_name, last_name: form.last_name,
-            phone: form.phone, address: form.address, apartment: form.apartment,
-            city: form.city, state: form.state, zip: form.zip,
-            id_document_url: idUrl, id_document_type: form.id_document_type,
-          }]);
-          if (dbError) throw dbError;
-          alert("✅ Kont kreye! Tcheke email ou pou konfirme.");
-          window.location.href = "/";
-        } catch(err) { alert("Erè: " + err.message); }
-        setLoading(false);
-      };
-
-      const F = (k, ph, type="text") => (
-        <div style={{ marginBottom: 14 }}>
-          <div style={{ fontSize: 11, color: T.muted, fontWeight: 700, letterSpacing: "0.8px", textTransform: "uppercase", marginBottom: 6 }}>{k.replace(/_/g," ").toUpperCase()}</div>
-          <input style={{...inp, borderColor: errors[k] ? T.accent : T.border}} type={type}
-            placeholder={ph} value={form[k]} onChange={e => set(k, e.target.value)} disabled={loading} />
-          {errors[k] && <div style={{color: T.accent, fontSize: 12, marginTop: 4}}>{errors[k]}</div>}
-        </div>
-      );
-
-      return (
-        <div style={{ maxWidth: 480, margin: "0 auto", background: "#EEF2FF", minHeight: "100vh" }}>
-          <Header title="👤 Kreye Kont Kliyan" onBack={onBack} />
-          <div style={{ padding: "16px 16px 100px" }}>
-            <div style={{ background: "#fff", borderRadius: 16, padding: 20, marginBottom: 14, border: `1px solid ${T.border}` }}>
-              <div style={{ fontWeight: 800, color: T.primary, marginBottom: 16 }}>📋 Enfòmasyon Pèsonèl</div>
-              {F("first_name", "Prenon")}
-              {F("last_name", "Non fanmi")}
-              {F("email", "email@exemple.com", "email")}
-              {F("phone", "(317) 555-0000", "tel")}
-            </div>
-            <div style={{ background: "#fff", borderRadius: 16, padding: 20, marginBottom: 14, border: `1px solid ${T.border}` }}>
-              <div style={{ fontWeight: 800, color: T.primary, marginBottom: 16 }}>🔐 Sekirite</div>
-              {F("password", "Omwen 6 karaktè", "password")}
-              {F("confirmPassword", "Repete password ou", "password")}
-            </div>
-            <div style={{ background: "#fff", borderRadius: 16, padding: 20, marginBottom: 14, border: `1px solid ${T.border}` }}>
-              <div style={{ fontWeight: 800, color: T.primary, marginBottom: 16 }}>📍 Adres</div>
-              {F("address", "3842 N Meridian St")}
-              {F("apartment", "Apt 2B (Opsyonèl)")}
-              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 10 }}>
-                <div>{F("city", "Indianapolis")}</div>
-                <div><div style={{fontSize:11,color:T.muted,fontWeight:700,textTransform:"uppercase",marginBottom:6}}>ETA</div><input style={{...inp}} value="IN" readOnly /></div>
-                <div>{F("zip", "46204")}</div>
-              </div>
-            </div>
-            <div style={{ background: "#fff", borderRadius: 16, padding: 20, marginBottom: 14, border: `1px solid ${T.border}` }}>
-              <div style={{ fontWeight: 800, color: T.primary, marginBottom: 16 }}>🪪 Verifikasyon ID</div>
-              <div style={{ marginBottom: 12 }}>
-                <div style={{fontSize:11,color:T.muted,fontWeight:700,textTransform:"uppercase",marginBottom:6}}>TIP ID</div>
-                <select style={{...inp}} value={form.id_document_type} onChange={e => set("id_document_type", e.target.value)} disabled={loading}>
-                  <option value="state_id">State ID</option>
-                  <option value="license">Lisans Kondwi</option>
-                  <option value="passport">Paspo</option>
-                </select>
-              </div>
-              <FileUpload label="Foto ID" bucket="customer-documents" path="customer" onUpload={setIdUrl} />
-              {errors.id && <div style={{color:T.accent,fontSize:12}}>{errors.id}</div>}
-            </div>
-            <button style={{...btn(`linear-gradient(135deg,${T.primary},${T.primaryDark})`)}}) onClick={submit} disabled={loading}>
-              {loading ? "⏳ Ap kreye kont..." : "✅ Kreye Kont Mwen"}
-            </button>
-          </div>
-        </div>
-      );
-    }
-
-    function DriverRegister({ onBack }) {
-      const [form, setForm] = useState({ email: "", password: "", confirmPassword: "", first_name: "", last_name: "", phone: "", address: "", apartment: "", city: "", state: "IN", zip: "", vehicle_make: "", vehicle_model: "", vehicle_year: "", vehicle_color: "", vehicle_plate: "" });
-      const [docs, setDocs] = useState({ license: "", registration: "", insurance: "", selfie: "" });
-      const [loading, setLoading] = useState(false);
-      const [errors, setErrors] = useState({});
-
-      const set = (k, v) => { setForm(p => ({...p, [k]: v})); setErrors(p => ({...p, [k]: ""})); };
-
-      const submit = async () => {
-        const e = {};
-        if (!form.email) e.email = "Email obligatwa";
-        if (!form.password || form.password.length < 6) e.password = "Omwen 6 karaktè";
-        if (form.password !== form.confirmPassword) e.confirmPassword = "Password pa matche";
-        if (!form.first_name) e.first_name = "Prenon obligatwa";
-        if (!form.phone) e.phone = "Telefòn obligatwa";
-        if (!form.address) e.address = "Adres obligatwa";
-        if (!docs.license) e.license = "Lisans obligatwa";
-        if (!docs.registration) e.registration = "Anrejistreman obligatwa";
-        if (!docs.insurance) e.insurance = "Asirans obligatwa";
-        if (!docs.selfie) e.selfie = "Selfie obligatwa";
-        if (Object.keys(e).length > 0) { setErrors(e); return; }
-        setLoading(true);
-        try {
-          if (!supabase) throw new Error("System not ready, refresh page");
-          const { error: authError } = await supabase.auth.signUp({
-            email: form.email, password: form.password,
-            options: { data: { role: "driver" } }
-          });
-          if (authError) throw authError;
-
-          const { data, error: dbError } = await supabase.from("drivers").insert([{
-            ...form,
-            drivers_license_url: docs.license,
-            vehicle_registration_url: docs.registration,
-            vehicle_insurance_url: docs.insurance,
-            selfie_url: docs.selfie,
-          }]).select();
-          if (dbError) throw dbError;
-
-          await supabase.from("admin_approvals").insert([{
-            applicant_id: data[0].id,
-            applicant_type: "driver",
-            applicant_name: `${form.first_name} ${form.last_name}`,
-            status: "pending"
-          }]);
-          alert("✅ Aplikasyon soumèt! Ou ap resevwa yon email lè kont ou apwouve.");
-          window.location.href = "/";
-        } catch(err) { alert("Erè: " + err.message); }
-        setLoading(false);
-      };
-
-      const F = (k, ph, type="text") => (
-        <div style={{ marginBottom: 14 }}>
-          <div style={{ fontSize: 11, color: T.muted, fontWeight: 700, letterSpacing: "0.8px", textTransform: "uppercase", marginBottom: 6 }}>{k.replace(/_/g," ").toUpperCase()}</div>
-          <input style={{...inp, borderColor: errors[k] ? T.accent : T.border}} type={type}
-            placeholder={ph} value={form[k]} onChange={e => set(k, e.target.value)} disabled={loading} />
-          {errors[k] && <div style={{color:T.accent,fontSize:12,marginTop:4}}>{errors[k]}</div>}
-        </div>
-      );
-
-      return (
-        <div style={{ maxWidth: 480, margin: "0 auto", background: "#EEF2FF", minHeight: "100vh" }}>
-          <Header title="🚗 Enskripsyon Chaofè" onBack={onBack} />
-          <div style={{ padding: "16px 16px 100px" }}>
-            <div style={{ background: "#fff", borderRadius: 16, padding: 20, marginBottom: 14, border: `1px solid ${T.border}` }}>
-              <div style={{ fontWeight: 800, color: T.accent, marginBottom: 16 }}>📋 Enfòmasyon Pèsonèl</div>
-              {F("first_name", "Prenon")} {F("last_name", "Non fanmi")}
-              {F("email", "email@exemple.com", "email")} {F("phone", "(317) 555-0000", "tel")}
-            </div>
-            <div style={{ background: "#fff", borderRadius: 16, padding: 20, marginBottom: 14, border: `1px solid ${T.border}` }}>
-              <div style={{ fontWeight: 800, color: T.accent, marginBottom: 16 }}>🔐 Sekirite</div>
-              {F("password", "Omwen 6 karaktè", "password")}
-              {F("confirmPassword", "Repete password", "password")}
-            </div>
-            <div style={{ background: "#fff", borderRadius: 16, padding: 20, marginBottom: 14, border: `1px solid ${T.border}` }}>
-              <div style={{ fontWeight: 800, color: T.accent, marginBottom: 16 }}>📍 Adres</div>
-              {F("address", "3842 N Meridian St")} {F("apartment", "Apt (Opsyonèl)")}
-              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 10 }}>
-                <div>{F("city","Indianapolis")}</div>
-                <div><div style={{fontSize:11,color:T.muted,fontWeight:700,textTransform:"uppercase",marginBottom:6}}>ETA</div><input style={{...inp}} value="IN" readOnly /></div>
-                <div>{F("zip","46204")}</div>
-              </div>
-            </div>
-            <div style={{ background: "#fff", borderRadius: 16, padding: 20, marginBottom: 14, border: `1px solid ${T.border}` }}>
-              <div style={{ fontWeight: 800, color: T.accent, marginBottom: 16 }}>🚙 Machin</div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                <div>{F("vehicle_make","Toyota")}</div> <div>{F("vehicle_model","Camry")}</div>
-                <div>{F("vehicle_year","2020")}</div> <div>{F("vehicle_color","Blan")}</div>
-              </div>
-              {F("vehicle_plate","ABC 123")}
-            </div>
-            <div style={{ background: "#fff", borderRadius: 16, padding: 20, marginBottom: 14, border: `1px solid ${T.border}` }}>
-              <div style={{ fontWeight: 800, color: T.accent, marginBottom: 16 }}>📄 Dokiman</div>
-              <FileUpload label="Lisans Kondwi" bucket="driver-documents" path="license" onUpload={u => { setDocs(p=>({...p,license:u})); setErrors(p=>({...p,license:""})); }} />
-              {errors.license && <div style={{color:T.accent,fontSize:12,marginBottom:8}}>{errors.license}</div>}
-              <FileUpload label="Anrejistreman Machin" bucket="driver-documents" path="registration" onUpload={u => { setDocs(p=>({...p,registration:u})); setErrors(p=>({...p,registration:""})); }} />
-              {errors.registration && <div style={{color:T.accent,fontSize:12,marginBottom:8}}>{errors.registration}</div>}
-              <FileUpload label="Asirans Machin" bucket="driver-documents" path="insurance" onUpload={u => { setDocs(p=>({...p,insurance:u})); setErrors(p=>({...p,insurance:""})); }} />
-              {errors.insurance && <div style={{color:T.accent,fontSize:12,marginBottom:8}}>{errors.insurance}</div>}
-              <FileUpload label="Selfie (Foto Ou)" bucket="driver-selfies" path="selfie" onUpload={u => { setDocs(p=>({...p,selfie:u})); setErrors(p=>({...p,selfie:""})); }} />
-              {errors.selfie && <div style={{color:T.accent,fontSize:12,marginBottom:8}}>{errors.selfie}</div>}
-            </div>
-            <button style={{...btn(`linear-gradient(135deg,${T.accent},#A81518)`)}}) onClick={submit} disabled={loading}>
-              {loading ? "⏳ Ap soumèt..." : "🚗 Soumèt Aplikasyon"}
-            </button>
-          </div>
-        </div>
-      );
-    }
-
-    function RestaurantRegister({ onBack }) {
-      const [form, setForm] = useState({ restaurant_name: "", owner_name: "", email: "", password: "", confirmPassword: "", phone: "", address: "", apartment: "", city: "", state: "IN", zip: "", ein_number: "" });
-      const [menuUrl, setMenuUrl] = useState("");
-      const [logoUrl, setLogoUrl] = useState("");
-      const [loading, setLoading] = useState(false);
-      const [errors, setErrors] = useState({});
-
-      const set = (k, v) => { setForm(p => ({...p, [k]: v})); setErrors(p => ({...p, [k]: ""})); };
-
-      const submit = async () => {
-        const e = {};
-        if (!form.restaurant_name) e.restaurant_name = "Non restoran obligatwa";
-        if (!form.owner_name) e.owner_name = "Non pwopriyetè obligatwa";
-        if (!form.email) e.email = "Email obligatwa";
-        if (!form.password || form.password.length < 6) e.password = "Omwen 6 karaktè";
-        if (form.password !== form.confirmPassword) e.confirmPassword = "Password pa matche";
-        if (!form.address) e.address = "Adres obligatwa";
-        if (!form.city) e.city = "Vil obligatwa";
-        if (!form.zip) e.zip = "ZIP obligatwa";
-        if (!form.ein_number) e.ein_number = "EIN obligatwa";
-        if (!menuUrl) e.menu = "Menu PDF obligatwa";
-        if (Object.keys(e).length > 0) { setErrors(e); return; }
-        setLoading(true);
-        try {
-          if (!supabase) throw new Error("System not ready, refresh page");
-          const { error: authError } = await supabase.auth.signUp({
-            email: form.email, password: form.password,
-            options: { data: { role: "restaurant" } }
-          });
-          if (authError) throw authError;
-
-          const { data, error: dbError } = await supabase.from("restaurants").insert([{
-            restaurant_name: form.restaurant_name, owner_name: form.owner_name,
-            email: form.email, phone: form.phone, address: form.address,
-            apartment: form.apartment, city: form.city, state: form.state,
-            zip: form.zip, ein_number: form.ein_number,
-            menu_pdf_url: menuUrl, logo_url: logoUrl,
-          }]).select();
-          if (dbError) throw dbError;
-
-          await supabase.from("admin_approvals").insert([{
-            applicant_id: data[0].id,
-            applicant_type: "restaurant",
-            applicant_name: form.restaurant_name,
-            status: "pending"
-          }]);
-          alert("✅ Aplikasyon soumèt! Ou ap resevwa yon email lè restoran ou apwouve.");
-          window.location.href = "/";
-        } catch(err) { alert("Erè: " + err.message); }
-        setLoading(false);
-      };
-
-      const F = (k, ph, type="text") => (
-        <div style={{ marginBottom: 14 }}>
-          <div style={{ fontSize: 11, color: T.muted, fontWeight: 700, letterSpacing: "0.8px", textTransform: "uppercase", marginBottom: 6 }}>{k.replace(/_/g," ").toUpperCase()}</div>
-          <input style={{...inp, borderColor: errors[k] ? T.accent : T.border}} type={type}
-            placeholder={ph} value={form[k]} onChange={e => set(k, e.target.value)} disabled={loading} />
-          {errors[k] && <div style={{color:T.accent,fontSize:12,marginTop:4}}>{errors[k]}</div>}
-        </div>
-      );
-
-      return (
-        <div style={{ maxWidth: 480, margin: "0 auto", background: "#EEF2FF", minHeight: "100vh" }}>
-          <Header title="🍴 Enskripsyon Restoran" onBack={onBack} />
-          <div style={{ padding: "16px 16px 100px" }}>
-            <div style={{ background: "#fff", borderRadius: 16, padding: 20, marginBottom: 14, border: `1px solid ${T.border}` }}>
-              <div style={{ fontWeight: 800, color: "#1a6b3a", marginBottom: 16 }}>🏪 Enfòmasyon Restoran</div>
-              {F("restaurant_name","Kay Manman Restaurant")} {F("owner_name","Non Pwopriyetè")}
-              {F("email","restaurant@exemple.com","email")} {F("phone","(317) 555-0000","tel")}
-            </div>
-            <div style={{ background: "#fff", borderRadius: 16, padding: 20, marginBottom: 14, border: `1px solid ${T.border}` }}>
-              <div style={{ fontWeight: 800, color: "#1a6b3a", marginBottom: 16 }}>🔐 Sekirite</div>
-              {F("password","Omwen 6 karaktè","password")}
-              {F("confirmPassword","Repete password","password")}
-            </div>
-            <div style={{ background: "#fff", borderRadius: 16, padding: 20, marginBottom: 14, border: `1px solid ${T.border}` }}>
-              <div style={{ fontWeight: 800, color: "#1a6b3a", marginBottom: 16 }}>📍 Adres Restoran</div>
-              {F("address","1204 E Washington St")} {F("apartment","Suite (Opsyonèl)")}
-              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 10 }}>
-                <div>{F("city","Indianapolis")}</div>
-                <div><div style={{fontSize:11,color:T.muted,fontWeight:700,textTransform:"uppercase",marginBottom:6}}>ETA</div><input style={{...inp}} value="IN" readOnly /></div>
-                <div>{F("zip","46201")}</div>
-              </div>
-            </div>
-            <div style={{ background: "#fff", borderRadius: 16, padding: 20, marginBottom: 14, border: `1px solid ${T.border}` }}>
-              <div style={{ fontWeight: 800, color: "#1a6b3a", marginBottom: 16 }}>💼 EIN Number</div>
-              {F("ein_number","XX-XXXXXXX")}
-              {errors.ein_number && <div style={{color:T.accent,fontSize:12}}>{errors.ein_number}</div>}
-            </div>
-            <div style={{ background: "#fff", borderRadius: 16, padding: 20, marginBottom: 14, border: `1px solid ${T.border}` }}>
-              <div style={{ fontWeight: 800, color: "#1a6b3a", marginBottom: 16 }}>📄 Dokiman</div>
-              <FileUpload label="Menu PDF (Obligatwa)" bucket="restaurant-documents" path="menu" accept=".pdf,image/*" onUpload={u => { setMenuUrl(u); setErrors(p=>({...p,menu:""})); }} />
-              {errors.menu && <div style={{color:T.accent,fontSize:12,marginBottom:8}}>{errors.menu}</div>}
-              <FileUpload label="Logo Restoran (Opsyonèl)" bucket="restaurant-documents" path="logo" onUpload={setLogoUrl} />
-            </div>
-            <button style={{...btn("linear-gradient(135deg,#1a6b3a,#0d4a28)")}}) onClick={submit} disabled={loading}>
-              {loading ? "⏳ Ap soumèt..." : "🍴 Soumèt Aplikasyon"}
-            </button>
-          </div>
-        </div>
-      );
-    }
-
-    function App() {
-      const [screen, setScreen] = useState("home");
-      const [ready, setReady] = useState(false);
-
-      useEffect(() => {
-        // Initialize Supabase when app loads
-        const initStart = setTimeout(() => {
-          const success = initSupabase();
-          setReady(success);
-          if (!success) {
-            console.error("Supabase failed to initialize");
-            alert("⚠️ System initialization issue. Please refresh the page.");
-          }
-        }, 500);
-        return () => clearTimeout(initStart);
-      }, []);
-
-      if (!ready) {
-        return (
-          <div style={{ maxWidth: 480, margin: "0 auto", fontFamily: "DM Sans", minHeight: "100vh", background: "linear-gradient(160deg, #003F87 0%, #002D63 45%, #D01C1F 100%)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24 }}>
-            <div style={{ color: "#fff", fontSize: 16, fontWeight: 700 }}>⏳ System Loading...</div>
-            <div style={{ color: "#ffffff88", fontSize: 12, marginTop: 8 }}>Please wait...</div>
-          </div>
-        );
+      if (!profile) {
+        const { data: d } = await supabase.from("drivers").select("*").eq("auth_user_id", data.user.id).maybeSingle();
+        if (d) profile = { role: "driver", status: d.status || (d.is_active ? "approved" : "pending") };
       }
 
-      if (screen === "customer") return <CustomerRegister onBack={() => setScreen("home")} />;
-      if (screen === "driver") return <DriverRegister onBack={() => setScreen("home")} />;
-      if (screen === "restaurant") return <RestaurantRegister onBack={() => setScreen("home")} />;
+      if (!profile) {
+        const { data: r } = await supabase.from("restaurants").select("*").eq("auth_user_id", data.user.id).maybeSingle();
+        if (r) profile = { role: "restaurant", status: r.status || (r.is_active ? "approved" : "pending") };
+      }
 
-      return (
-        <div style={{ maxWidth: 480, margin: "0 auto", fontFamily: "DM Sans", minHeight: "100vh", background: "linear-gradient(160deg, #003F87 0%, #002D63 45%, #D01C1F 100%)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24 }}>
-          <img src={LOGO} style={{ width: 160, height: 160, borderRadius: "50%", objectFit: "cover", border: "4px solid #FFD700", marginBottom: 16 }} />
-          <div style={{ color: "#ffffff88", fontSize: 14, marginBottom: 40 }}>Indianapolis Haitian Food Platform 🇭🇹</div>
+      if (!profile) {
+        alert("Kont lan pa jwenn nan database la.");
+        setLoading(false);
+        return;
+      }
 
-          <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 14 }}>
-            {[
-              { id: "customer", icon: "👤", title: "Mwen se Kliyan", desc: "Kòmande manje Ayisyen livré lakay ou", color: "#fff", textColor: "#003F87" },
-              { id: "driver", icon: "🚗", title: "Mwen se Chaofè", desc: "Livre manje — touche 70% delivery fee", color: "transparent", textColor: "#fff", border: "2px solid #fff" },
-              { id: "restaurant", icon: "🍴", title: "Mwen se Restoran", desc: "Ajoute restoran ou sou platfòm nan", color: "transparent", textColor: "#fff", border: "2px solid #FFD700" },
-            ].map((item) => (
-              <button key={item.id} onClick={() => setScreen(item.id)}
-                style={{ background: item.color, color: item.textColor, border: item.border || "none", borderRadius: 16, padding: "18px 20px", cursor: "pointer", fontFamily: "DM Sans", textAlign: "left", display: "flex", gap: 14, alignItems: "center" }}>
-                <div style={{ fontSize: 32 }}>{item.icon}</div>
-                <div>
-                  <div style={{ fontWeight: 800, fontSize: 16 }}>{item.title}</div>
-                  <div style={{ fontSize: 13, opacity: 0.8, marginTop: 4 }}>{item.desc}</div>
-                </div>
-              </button>
-            ))}
-          </div>
+      if (profile.status !== "approved" && profile.status !== "active") {
+        alert("Kont ou poko apwouve. Admin dwe verifye li avan.");
+        setLoading(false);
+        return;
+      }
 
-          <div style={{ textAlign: "center", marginTop: 24, color: "#ffffff66", fontSize: 13 }}>
-            Ou deja gen yon kont?{" "}
-            <span style={{ color: "#FFD700", fontWeight: 700, cursor: "pointer" }}
-              onClick={() => window.location.href = "/"}>
-              Sign In →
-            </span>
-          </div>
-        </div>
-      );
+      if (profile.role === "admin") {
+        window.location.href = "/admin";
+      } else {
+        window.location.href = "/dashboard";
+      }
+    } catch (err) {
+      alert("Erè login: " + err.message);
     }
+    setLoading(false);
+  };
 
-    // Mount React app
-    const root = ReactDOM.createRoot(document.getElementById("root"));
-    root.render(<App />);
-  </script>
+  return (
+    <Page title="🔐 Sign In" onBack={onBack}>
+      <Card title="Antre nan kont ou" color={T.primary}>
+        <Field label="Email" value={email} onChange={setEmail} type="email" disabled={loading}/>
+        <Field label="Password" value={password} onChange={setPassword} type="password" disabled={loading}/>
+        <button style={buttonStyle(`linear-gradient(135deg,${T.primary},${T.primaryDark})`)} onClick={login} disabled={loading}>
+          {loading ? "⏳ Ap antre..." : "Sign In"}
+        </button>
+        <button style={buttonStyle("#fff", T.primary)} onClick={onForgot} disabled={loading}>
+          Forgot Password
+        </button>
+      </Card>
+    </Page>
+  );
+}
+
+function ForgotPassword({ onBack }) {
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const send = async () => {
+    if (!email) {
+      alert("Antre email ou");
+      return;
+    }
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: "https://rapiddelivri.vercel.app/auth"
+      });
+      if (error) throw error;
+      alert("✅ Link reset password voye nan email ou.");
+    } catch (err) {
+      alert("Erè: " + err.message);
+    }
+    setLoading(false);
+  };
+
+  return (
+    <Page title="🔑 Forgot Password" onBack={onBack}>
+      <Card title="Reset password ou" color={T.primary}>
+        <Field label="Email" value={email} onChange={setEmail} type="email" disabled={loading}/>
+        <button style={buttonStyle(`linear-gradient(135deg,${T.primary},${T.primaryDark})`)} onClick={send} disabled={loading}>
+          {loading ? "⏳ Ap voye..." : "Send Reset Link"}
+        </button>
+      </Card>
+    </Page>
+  );
+}
+
+function Card({ title, color, children }) {
+  return (
+    <div style={{ background: "#fff", borderRadius: 16, padding: 20, marginBottom: 14, border: `1px solid ${T.border}` }}>
+      <div style={{ fontWeight: 900, color, marginBottom: 16 }}>{title}</div>
+      {children}
+    </div>
+  );
+}
+
+function Page({ title, onBack, children }) {
+  return (
+    <div style={{ maxWidth: 480, margin: "0 auto", background: "#EEF2FF", minHeight: "100vh" }}>
+      <Header title={title} onBack={onBack}/>
+      <div style={{ padding: "16px 16px 100px" }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function ErrorText({ text }) {
+  return <div style={{ color: T.accent, fontSize: 12, marginBottom: 8 }}>{text}</div>;
+}
+
+function Home({ setScreen }) {
+  return (
+    <div style={{ maxWidth: 480, margin: "0 auto", minHeight: "100vh", background: "linear-gradient(160deg, #003F87 0%, #002D63 45%, #D01C1F 100%)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <div style={{ width: 150, height: 150, borderRadius: "50%", background: "#FFD700", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 42, fontWeight: 900, color: T.primary, border: "4px solid #fff", marginBottom: 18 }}>RD</div>
+      <div style={{ color: "#fff", fontSize: 28, fontWeight: 900, marginBottom: 8 }}>Rapid Delivri</div>
+      <div style={{ color: "#ffffffcc", fontSize: 14, marginBottom: 34 }}>Indianapolis Haitian Food Platform 🇭🇹</div>
+
+      <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 14 }}>
+        <button onClick={() => setScreen("signin")} style={{ ...buttonStyle("#FFD700", T.primary), marginTop: 0 }}>🔐 Sign In</button>
+        <button onClick={() => setScreen("customer")} style={{ ...buttonStyle("#fff", T.primary), marginTop: 0 }}>👤 Mwen se Kliyan</button>
+        <button onClick={() => setScreen("driver")} style={{ ...buttonStyle("transparent"), border: "2px solid #fff", marginTop: 0 }}>🚗 Mwen se Chofè</button>
+        <button onClick={() => setScreen("restaurant")} style={{ ...buttonStyle("transparent"), border: "2px solid #FFD700", marginTop: 0 }}>🍴 Mwen se Restoran</button>
+      </div>
+
+      <div style={{ textAlign: "center", marginTop: 24, color: "#ffffff99", fontSize: 13 }}>
+        Bliye password?{" "}
+        <span style={{ color: "#FFD700", fontWeight: 800, cursor: "pointer" }} onClick={() => setScreen("forgot")}>
+          Reset here
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const [screen, setScreen] = useState("home");
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const ok = initSupabase();
+    setReady(ok);
+  }, []);
+
+  if (!ready) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: T.primary, color: "#fff", fontWeight: 900 }}>
+        ⏳ System Loading...
+      </div>
+    );
+  }
+
+  if (screen === "customer") return <CustomerRegister onBack={() => setScreen("home")}/>;
+  if (screen === "driver") return <DriverRegister onBack={() => setScreen("home")}/>;
+  if (screen === "restaurant") return <RestaurantRegister onBack={() => setScreen("home")}/>;
+  if (screen === "signin") return <SignIn onBack={() => setScreen("home")} onForgot={() => setScreen("forgot")}/>;
+  if (screen === "forgot") return <ForgotPassword onBack={() => setScreen("signin")}/>;
+
+  return <Home setScreen={setScreen}/>;
+}
+
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<App/>);
+</script>
 </body>
 </html>
