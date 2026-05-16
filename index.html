@@ -833,51 +833,27 @@ function RapidDelivri() {
       <style>{css}</style>
       {/* Language selector */}
       <div style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 24 }}>
-        {[["en","🇺🇸"],["ht","🇭🇹"],["es","🇪🇸"],["fr","🇫🇷"],["pt","🇧🇷"]].map(([code, flag]) => (
-          <button key={code} onClick={() => setLang(code)} style={{
-         
+      {[["en","🇺🇸"],["ht","🇭🇹"],["es","🇪🇸"],["fr","🇫🇷"],["pt","🇧🇷"]].map(([code, flag]) => (
+      <button key={code} onClick={() => setLang(code)} style={{ padding: "8px 12px" }}>    
       <div className="slide-up" style={{ textAlign: "center", marginBottom: 40 }}>
         <LogoSVG height={90} style={{ margin: "0 auto 8px" }} />
         <div style={{ color: "#ffffff99", marginTop: 8, fontSize: 15 }}>{L.platform}</div>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }} className="slide-up">
-
-  <button
+      <button
     className="btn-press"
     style={{ ...s.btn, background: "#fff", color: T.primary }}
     onClick={() => window.location.href="/auth-system.html"}
-  >
+        >
     👤 {L.customer}
   </button>
-
-</div>
-  </button>
   <button className="btn-press" style={{ ...s.btnGhost, background: "#ffffff22", color: "#fff", border: "1px solid #ffffff44" }} onClick={() => window.location.href="/auth-system.html?role=restaurant"}>
-    🍽️ {L.restaurant}
-  </button>
-</div>
-  👤 {L.customer}
-</button>
-
-<button
-  className="btn-press"
-  style={{
-    ...s.btnGhost,
-    background: "#ffffff22",
-    color: "#fff",
-    border: "1px solid #ffffff44"
-  }}
-  onClick={() => window.location.href="/auth-system.html?role=driver"}
->
-  🚗 {L.driver}
+  🍽️ {L.restaurant}
 </button>
 
 </div>
-        
-        </button>
-      </div>
-    </div>
-  );
+</div>
+);
 
   // ── ADMIN DASHBOARD ──────────────────────────────────────────────────────
   if (screen === "admin") {
