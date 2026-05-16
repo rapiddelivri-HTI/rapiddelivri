@@ -883,7 +883,7 @@ function detectLang() {
             if (session.user.email === "rapiddelivri@gmail.com") {
   setUserRole("admin");
 } else {
-  setUserRole(session.user.user_metadata?.role || "customer");
+  setUserRole(session.user.raw_user_meta_data?.role || "customer");
 }
           }
         });
