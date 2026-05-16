@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ht">
+<html lang="h
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -37,7 +37,58 @@
       border: "#E2E6F0", surface: "#F8FAFF",
       gold: "#FFD700",
     };
+    const TRANSLATIONS = {
+  en: {
+    signin: "Sign In",
+    customer: "I am a Customer",
+    driver: "I am a Driver",
+    restaurant: "I am a Restaurant",
+    platform: "Indianapolis Haitian Food Platform"
+  },
 
+  ht: {
+    signin: "Konekte",
+    customer: "Mwen se Kliyan",
+    driver: "Mwen se Chofè",
+    restaurant: "Mwen se Restoran",
+    platform: "Platfòm Manje Ayisyen Indianapolis"
+  },
+
+  es: {
+    signin: "Iniciar sesión",
+    customer: "Soy Cliente",
+    driver: "Soy Conductor",
+    restaurant: "Soy Restaurante",
+    platform: "Plataforma haitiana"
+  },
+
+  fr: {
+    signin: "Connexion",
+    customer: "Je suis Client",
+    driver: "Je suis Chauffeur",
+    restaurant: "Je suis Restaurant",
+    platform: "Plateforme haïtienne"
+  },
+
+  pt: {
+    signin: "Entrar",
+    customer: "Sou Cliente",
+    driver: "Sou Motorista",
+    restaurant: "Sou Restaurante",
+    platform: "Plataforma haitiana"
+  }
+};
+
+function detectLang() {
+  const lang = navigator.language.toLowerCase();
+
+  if (lang.startsWith("ht")) return "ht";
+  if (lang.startsWith("es")) return "es";
+  if (lang.startsWith("fr")) return "fr";
+  if (lang.startsWith("pt")) return "pt";
+
+  return "en";
+}
     const inp = (err) => ({
       background: T.surface, border: `1.5px solid ${err ? T.accent : T.border}`,
       borderRadius: 10, padding: "13px 14px", color: T.text,
