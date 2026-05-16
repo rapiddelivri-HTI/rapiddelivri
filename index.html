@@ -847,6 +847,29 @@ function RapidDelivri() {
         <div style={{ color: "#ffffff99", marginTop: 8, fontSize: 15 }}>{L.platform}</div>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }} className="slide-up">
+
+<button
+  className="btn-press"
+  style={{ ...s.btn, background: "#fff", color: T.primary }}
+  onClick={() => window.location.href="/auth-system.html"}
+>
+  👤 {L.customer}
+</button>
+
+<button
+  className="btn-press"
+  style={{
+    ...s.btnGhost,
+    background: "#ffffff22",
+    color: "#fff",
+    border: "1px solid #ffffff44"
+  }}
+  onClick={() => window.location.href="/auth-system.html?role=driver"}
+>
+  🚗 {L.driver}
+</button>
+
+</div>
         <button className="btn-press" style={{ ...s.btn, background: "#fff", color: T.primary }} onClick={() => window.location.href="/auth-system.html"}}>
           👤 {L.customer}
         </button>
