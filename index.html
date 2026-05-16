@@ -847,13 +847,13 @@ function RapidDelivri() {
         <div style={{ color: "#ffffff99", marginTop: 8, fontSize: 15 }}>{L.platform}</div>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }} className="slide-up">
-        <button className="btn-press" style={{ ...s.btn, background: "#fff", color: T.primary }} onClick={() => { setRole("customer"); setScreen("home"); }}>
+        <button className="btn-press" style={{ ...s.btn, background: "#fff", color: T.primary }} onClick={() => window.location.href="/auth-system.html"}}>
           👤 {L.customer}
         </button>
-        <button className="btn-press" style={{ ...s.btnGhost, background: "#ffffff22", color: "#fff", border: "1px solid #ffffff44" }} onClick={() => { setRole("driver"); setScreen("driver"); }}>
+        <button className="btn-press" style={{ ...s.btnGhost, background: "#ffffff22", color: "#fff", border: "1px solid #ffffff44" }} onClick={() => window.location.href="/auth-system.html?role=driver"}}>
           🚗 {L.driver}
         </button>
-        <button className="btn-press" style={{ ...s.btnGhost, background: "#ffffff22", color: "#fff", border: "1px solid #ffffff44" }} onClick={() => { setRole("restaurant"); setScreen("restaurant"); }}>
+        <button className="btn-press" style={{ ...s.btnGhost, background: "#ffffff22", color: "#fff", border: "1px solid #ffffff44" }} onClick={() => window.location.href="/auth-system.html?role=restaurant"}}>
           🍴 {L.restaurant}
         </button>
         <button className="btn-press" style={{ background: "#FFD70022", color: "#FFD700", border: "1px solid #FFD70066", borderRadius: 14, padding: "14px", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: T.font }} onClick={() => { setRole("admin"); setScreen("admin"); }}>
