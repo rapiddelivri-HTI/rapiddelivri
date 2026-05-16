@@ -835,10 +835,7 @@ function RapidDelivri() {
       <div style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 24 }}>
         {[["en","🇺🇸"],["ht","🇭🇹"],["es","🇪🇸"],["fr","🇫🇷"],["pt","🇧🇷"]].map(([code, flag]) => (
           <button key={code} onClick={() => setLang(code)} style={{
-            background: lang === code ? "#fff" : "#ffffff22",
-            border: lang === code ? "2px solid #FFD700" : "1px solid #ffffff44",
-            borderRadius: 8, padding: "6px 10px", cursor: "pointer", fontSize: 18,
-            fontFamily: T.font, transition: "all 0.2s"
+           
           }}>{flag}</button>
         ))}
       </div>
