@@ -891,7 +891,14 @@ function detectLang() {
 
       // Already logged in - show profile options
       if (currentUser && screen !== "reset") {
-        if (screen === "edit") return <EditProfile user={currentUser} role={userRole} onBack={() => setScreen("loggedin")} />;
+       if (userRole === "admin") {
+  return <AdminPanel onLogout={() => {
+    supabase.auth.signOut();
+    setCurrentUser(null);
+    setUserRole(null);
+    setScreen("home");
+  }} />;
+} if (screen === "edit") return <EditProfile user={currentUser} role={userRole} onBack={() => setScreen("loggedin")} />;
         return (
           <div style={{ maxWidth: 480, margin: "0 auto", background: "#EEF2FF", minHeight: "100vh" }}>
             <Header title="⚙️ Kont Mwen" />
