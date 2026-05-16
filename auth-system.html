@@ -28,8 +28,20 @@ let supabase = null;
 
 function initSupabase() {
   try {
-    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    if (!window.supabase || !window.supabase.createClient) {
+      console.error("Supabase pa chaje");
+      return false;
+    }
+
+    supabase = window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_ANON_KEY
+    );
+
+    console.log("Supabase konekte");
     return true;
+
   } catch (err) {
     console.error(err);
     return false;
