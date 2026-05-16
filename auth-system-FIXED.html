@@ -880,7 +880,11 @@ function detectLang() {
         supabase.auth.getSession().then(({ data: { session } }) => {
           if (session?.user) {
             setCurrentUser(session.user);
-            setUserRole(session.user.user_metadata?.role || "customer");
+            if (session.user.email === "rapiddelivri@gmail.com") {
+  setUserRole("admin");
+} else {
+  setUserRole(session.user.user_metadata?.role || "customer");
+}
           }
         });
       }, []);
