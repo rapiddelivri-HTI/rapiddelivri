@@ -876,64 +876,64 @@ function RapidDelivri() {
   );
 
   const loadAdminData = async () => {
-    setLoading(true);
-    try {
-      // Load pending approvals
-      const { data: approvals } = await supabase
-        .from('admin_approvals')
-        .select('*')
-        .eq('status', 'pending')
-        .order('created_at', { ascending: false });
+      setLoading(true);
+      try {
+        // Load pending approvals
+        const { data: approvals } = await supabase
+          .from('admin_approvals')
+          .select('*')
+          .eq('status', 'pending')
+          .order('created_at', { ascending: false });
 
-      // Load drivers pending
-      const { data: drivers } = await supabase
-        .from('drivers')
-        .select('*')
-        .eq('is_approved', false)
-        .order('created_at', { ascending: false });
+        // Load drivers pending
+        const { data: drivers } = await supabase
+          .from('drivers')
+          .select('*')
+          .eq('is_approved', false)
+          .order('created_at', { ascending: false });
 
-      // Load restaurants pending
-      const { data: restaurants } = await supabase
-        .from('restaurants')
-        .select('*')
-        .eq('is_approved', false)
-        .order('created_at', { ascending: false });
+        // Load restaurants pending
+        const { data: restaurants } = await supabase
+          .from('restaurants')
+          .select('*')
+          .eq('is_approved', false)
+          .order('created_at', { ascending: false });
 
-      // Load all customers
-      const { data: customers } = await supabase
-        .from('customers')
-        .select('*')
-        .order('created_at', { ascending: false });
+        // Load all customers
+        const { data: customers } = await supabase
+          .from('customers')
+          .select('*')
+          .order('created_at', { ascending: false });
 
-      // Load orders
-      const { data: orders } = await supabase
-        .from('orders')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(50);
+        // Load orders
+        const { data: orders } = await supabase
+          .from('orders')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(50);
 
-      // Stats
-      const { count: custCount } = await supabase.from('customers').select('*', { count: 'exact', head: true });
-      const { count: drivCount } = await supabase.from('drivers').select('*', { count: 'exact', head: true });
-      const { count: restCount } = await supabase.from('restaurants').select('*', { count: 'exact', head: true });
-      const { count: ordCount } = await supabase.from('orders').select('*', { count: 'exact', head: true });
+        // Stats
+        const { count: custCount } = await supabase.from('customers').select('*', { count: 'exact', head: true });
+        const { count: drivCount } = await supabase.from('drivers').select('*', { count: 'exact', head: true });
+        const { count: restCount } = await supabase.from('restaurants').select('*', { count: 'exact', head: true });
+        const { count: ordCount } = await supabase.from('orders').select('*', { count: 'exact', head: true });
 
-      setPendingDrivers(drivers || []);
-      setPendingRestaurants(restaurants || []);
-      setAllCustomers(customers || []);
-      setAllOrders(orders || []);
-      setStats({
-        customers: custCount || 0,
-        drivers: drivCount || 0,
-        restaurants: restCount || 0,
-        orders: ordCount || 0,
-        revenue: (orders || []).reduce((s, o) => s + (parseFloat(o.grand_total) || 0), 0)
-      });
-    } catch (err) {
-      console.error('Admin load error:', err);
+        setPendingDrivers(drivers || []);
+        setPendingRestaurants(restaurants || []);
+        setAllCustomers(customers || []);
+        setAllOrders(orders || []);
+        setStats({
+          customers: custCount || 0,
+          drivers: drivCount || 0,
+          restaurants: restCount || 0,
+          orders: ordCount || 0,
+          revenue: (orders || []).reduce((s, o) => s + (parseFloat(o.grand_total) || 0), 0)
+        });
+      } catch (err) {
+        console.error('Admin load error:', err);
+      }
+      setLoading(false);
     }
-    setLoading(false);
-  }
 
   // ── ADMIN DASHBOARD ──────────────────────────────────────────────────────
   if (screen === "admin") {
@@ -942,86 +942,37 @@ function RapidDelivri() {
     const approveDriver = async (driver) => {
       await supabase.from('drivers').update({ is_approved: true, is_active: true, approval_date: new Date().toISOString(), approved_by: 'Admin' }).eq('id', driver.id);
       await supabase.from('admin_approvals').update({ status: 'approved', reviewed_at: new Date().toISOString() }).eq('applicant_id', driver.id);
-
-      // Kreye Stripe Connect account + voye lyen nan email
       try {
-        const stripeRes = await fetch('/api/stripe-connect', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'create_account', email: driver.email, name: driver.first_name + ' ' + driver.last_name, type: 'driver' }),
-        });
+        const stripeRes = await fetch('/api/stripe-connect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'create_account', email: driver.email, name: driver.first_name + ' ' + driver.last_name, type: 'driver' }) });
         const { accountId } = await stripeRes.json();
-
-        const linkRes = await fetch('/api/stripe-connect', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'onboarding_link', accountId }),
-        });
+        const linkRes = await fetch('/api/stripe-connect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'onboarding_link', accountId }) });
         const { url: stripeLink } = await linkRes.json();
-
-        // Sove stripe account id
         await supabase.from('drivers').update({ stripe_account_id: accountId }).eq('id', driver.id);
-
-        // Voye email apwobasyon ak lyen Stripe
-        await fetch('https://rhtbmqixkpkhubmkfefx.supabase.co/functions/v1/send-approval-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJodGJtcWl4a3BraHVibWtmZWZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NTM3NjYsImV4cCI6MjA5MzAyOTc2Nn0.23EJqlFpgauW_iDCYkywCnCzH9QL_Y-Nz_hlD10VN2A` },
-          body: JSON.stringify({ type: 'driver_approved', to: driver.email, name: driver.first_name, stripeLink }),
-        });
+        await fetch('https://rhtbmqixkpkhubmkfefx.supabase.co/functions/v1/send-approval-email', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJodGJtcWl4a3BraHVibWtmZWZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NTM3NjYsImV4cCI6MjA5MzAyOTc2Nn0.23EJqlFpgauW_iDCYkywCnCzH9QL_Y-Nz_hlD10VN2A` }, body: JSON.stringify({ type: 'driver_approved', to: driver.email, name: driver.first_name, stripeLink }) });
       } catch(e) { console.log('Stripe/email error:', e); }
-
       loadAdminData();
-      pushNotif({ icon: "✅", title: "Chaofè Apwouve!", body: `${driver.first_name} ${driver.last_name} — Email + Stripe voye!`, tag: "ADMIN", color: T.green });
+      pushNotif({ icon: "✅", title: "Chaofè Apwouve!", body: `${driver.first_name} — Email + Stripe voye!`, tag: "ADMIN", color: T.green });
     };
 
     const rejectDriver = async (driver) => {
       await supabase.from('drivers').update({ is_approved: false, rejection_reason: rejectReason }).eq('id', driver.id);
       await supabase.from('admin_approvals').update({ status: 'rejected', admin_notes: rejectReason, reviewed_at: new Date().toISOString() }).eq('applicant_id', driver.id);
-      // Voye email reji
-      try {
-        await fetch('https://rhtbmqixkpkhubmkfefx.supabase.co/functions/v1/send-approval-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJodGJtcWl4a3BraHVibWtmZWZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NTM3NjYsImV4cCI6MjA5MzAyOTc2Nn0.23EJqlFpgauW_iDCYkywCnCzH9QL_Y-Nz_hlD10VN2A` },
-          body: JSON.stringify({ type: 'driver_rejected', to: driver.email, name: driver.first_name, reason: rejectReason }),
-        });
-      } catch(e) { console.log('Email error:', e); }
-      setShowRejectModal(null);
-      setRejectReason("");
-      loadAdminData();
-      pushNotif({ icon: "❌", title: "Chaofè Rejte", body: driver.first_name + ' — Email voye', tag: "ADMIN", color: T.accent });
+      try { await fetch('https://rhtbmqixkpkhubmkfefx.supabase.co/functions/v1/send-approval-email', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJodGJtcWl4a3BraHVibWtmZWZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NTM3NjYsImV4cCI6MjA5MzAyOTc2Nn0.23EJqlFpgauW_iDCYkywCnCzH9QL_Y-Nz_hlD10VN2A` }, body: JSON.stringify({ type: 'driver_rejected', to: driver.email, name: driver.first_name, reason: rejectReason }) }); } catch(e) {}
+      setShowRejectModal(null); setRejectReason(""); loadAdminData();
+      pushNotif({ icon: "❌", title: "Chaofè Rejte", body: driver.first_name, tag: "ADMIN", color: T.accent });
     };
 
     const approveRestaurant = async (rest) => {
       await supabase.from('restaurants').update({ is_approved: true, is_active: true, approval_date: new Date().toISOString(), approved_by: 'Admin' }).eq('id', rest.id);
       await supabase.from('admin_approvals').update({ status: 'approved', reviewed_at: new Date().toISOString() }).eq('applicant_id', rest.id);
-
-      // Kreye Stripe Connect account + voye lyen nan email
       try {
-        const stripeRes = await fetch('/api/stripe-connect', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'create_account', email: rest.email, name: rest.restaurant_name, type: 'restaurant' }),
-        });
+        const stripeRes = await fetch('/api/stripe-connect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'create_account', email: rest.email, name: rest.restaurant_name, type: 'restaurant' }) });
         const { accountId } = await stripeRes.json();
-
-        const linkRes = await fetch('/api/stripe-connect', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'onboarding_link', accountId }),
-        });
+        const linkRes = await fetch('/api/stripe-connect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'onboarding_link', accountId }) });
         const { url: stripeLink } = await linkRes.json();
-
-        // Sove stripe account id
         await supabase.from('restaurants').update({ stripe_account_id: accountId }).eq('id', rest.id);
-
-        // Voye email apwobasyon ak lyen Stripe
-        await fetch('https://rhtbmqixkpkhubmkfefx.supabase.co/functions/v1/send-approval-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJodGJtcWl4a3BraHVibWtmZWZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NTM3NjYsImV4cCI6MjA5MzAyOTc2Nn0.23EJqlFpgauW_iDCYkywCnCzH9QL_Y-Nz_hlD10VN2A` },
-          body: JSON.stringify({ type: 'restaurant_approved', to: rest.email, name: rest.restaurant_name, stripeLink }),
-        });
+        await fetch('https://rhtbmqixkpkhubmkfefx.supabase.co/functions/v1/send-approval-email', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJodGJtcWl4a3BraHVibWtmZWZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NTM3NjYsImV4cCI6MjA5MzAyOTc2Nn0.23EJqlFpgauW_iDCYkywCnCzH9QL_Y-Nz_hlD10VN2A` }, body: JSON.stringify({ type: 'restaurant_approved', to: rest.email, name: rest.restaurant_name, stripeLink }) });
       } catch(e) { console.log('Stripe/email error:', e); }
-
       loadAdminData();
       pushNotif({ icon: "✅", title: "Restoran Apwouve!", body: `${rest.restaurant_name} — Email + Stripe voye!`, tag: "ADMIN", color: T.green });
     };
@@ -1029,16 +980,8 @@ function RapidDelivri() {
     const rejectRestaurant = async (rest) => {
       await supabase.from('restaurants').update({ is_approved: false, rejection_reason: rejectReason }).eq('id', rest.id);
       await supabase.from('admin_approvals').update({ status: 'rejected', admin_notes: rejectReason, reviewed_at: new Date().toISOString() }).eq('applicant_id', rest.id);
-      try {
-        await fetch('https://rhtbmqixkpkhubmkfefx.supabase.co/functions/v1/send-approval-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJodGJtcWl4a3BraHVibWtmZWZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NTM3NjYsImV4cCI6MjA5MzAyOTc2Nn0.23EJqlFpgauW_iDCYkywCnCzH9QL_Y-Nz_hlD10VN2A` },
-          body: JSON.stringify({ type: 'restaurant_rejected', to: rest.email, name: rest.restaurant_name, reason: rejectReason }),
-        });
-      } catch(e) { console.log('Email error:', e); }
-      setShowRejectModal(null);
-      setRejectReason("");
-      loadAdminData();
+      try { await fetch('https://rhtbmqixkpkhubmkfefx.supabase.co/functions/v1/send-approval-email', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJodGJtcWl4a3BraHVibWtmZWZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NTM3NjYsImV4cCI6MjA5MzAyOTc2Nn0.23EJqlFpgauW_iDCYkywCnCzH9QL_Y-Nz_hlD10VN2A` }, body: JSON.stringify({ type: 'restaurant_rejected', to: rest.email, name: rest.restaurant_name, reason: rejectReason }) }); } catch(e) {}
+      setShowRejectModal(null); setRejectReason(""); loadAdminData();
     };
 
     const toggleCustomer = async (customer) => {
@@ -1116,6 +1059,7 @@ function RapidDelivri() {
         </div>
         <button style={{ background: "none", border: "none", color: "#ffffff66", marginTop: 24, cursor: "pointer", fontFamily: T.font, fontSize: 14 }} onClick={() => setScreen("role")}>← Retounen</button>
       </div>
+    </div>
     );
 
     return (
@@ -1412,7 +1356,6 @@ function RapidDelivri() {
           )}
 
         </div>
-        </div>
         <Toast notif={notif} />
       </div>
     );
@@ -1491,9 +1434,9 @@ if (screen === "restaurant") return (
           </>
         )}
       </div>
+            </div>
       </div>
-      </div>
-      <Toast notif={notif} />
+<Toast notif={notif} />
     </div>
   );
 
@@ -1599,8 +1542,8 @@ if (screen === "restaurant") return (
           </div>
         )}
       </div>
-      </div>
-      <Toast notif={notif} />
+            </div>
+<Toast notif={notif} />
     </div>
   );
 
@@ -1673,8 +1616,8 @@ if (screen === "restaurant") return (
             <button className="btn-press" style={s.btnOutline} onClick={() => setScreen("home")}>{L.backHome}</button>
           </div>
         </div>
-        </div>
-        <Toast notif={notif} />
+              </div>
+<Toast notif={notif} />
       </div>
     );
   }
@@ -1742,9 +1685,9 @@ if (screen === "restaurant") return (
             </div>
           </div>
         </div>
-        </div>
       </div>
-      <Toast notif={notif} />
+            </div>
+<Toast notif={notif} />
     </div>
   );
 
@@ -1870,9 +1813,9 @@ if (screen === "restaurant") return (
           </button>
         </div>
       </div>
+            </div>
       </div>
-      </div>
-      <Toast notif={notif} />
+<Toast notif={notif} />
     </div>
   );
 
