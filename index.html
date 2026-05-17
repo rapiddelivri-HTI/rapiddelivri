@@ -1777,16 +1777,15 @@ if (screen === "restaurant") return (
               <span style={{ fontSize: 13, color: T.muted }}>{label}</span>
               <span style={{ fontSize: 13, color, fontWeight: 700 }}>${val.toFixed(2)}</span>
             </div>
-          ))}
+            )))}
         </div>
-
         <div style={{ padding: "0 16px 16px" }}>
           <button className="btn-press" style={s.btnGold} onClick={() => setScreen("checkout")}>
             {L.stripeBtn(grandTotal.toFixed(2))}
           </button>
         </div>
       </div>
-            </div>
+     </div>
       </div>
     </div>
   );
