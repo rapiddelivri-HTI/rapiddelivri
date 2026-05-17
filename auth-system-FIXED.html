@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="h
+<html lang="ht">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -37,58 +37,7 @@
       border: "#E2E6F0", surface: "#F8FAFF",
       gold: "#FFD700",
     };
-    const TRANSLATIONS = {
-  en: {
-    signin: "Sign In",
-    customer: "I am a Customer",
-    driver: "I am a Driver",
-    restaurant: "I am a Restaurant",
-    platform: "Indianapolis Haitian Food Platform"
-  },
 
-  ht: {
-    signin: "Konekte",
-    customer: "Mwen se Kliyan",
-    driver: "Mwen se Chofè",
-    restaurant: "Mwen se Restoran",
-    platform: "Platfòm Manje Ayisyen Indianapolis"
-  },
-
-  es: {
-    signin: "Iniciar sesión",
-    customer: "Soy Cliente",
-    driver: "Soy Conductor",
-    restaurant: "Soy Restaurante",
-    platform: "Plataforma haitiana"
-  },
-
-  fr: {
-    signin: "Connexion",
-    customer: "Je suis Client",
-    driver: "Je suis Chauffeur",
-    restaurant: "Je suis Restaurant",
-    platform: "Plateforme haïtienne"
-  },
-
-  pt: {
-    signin: "Entrar",
-    customer: "Sou Cliente",
-    driver: "Sou Motorista",
-    restaurant: "Sou Restaurante",
-    platform: "Plataforma haitiana"
-  }
-};
-
-function detectLang() {
-  const lang = navigator.language.toLowerCase();
-
-  if (lang.startsWith("ht")) return "ht";
-  if (lang.startsWith("es")) return "es";
-  if (lang.startsWith("fr")) return "fr";
-  if (lang.startsWith("pt")) return "pt";
-
-  return "en";
-}
     const inp = (err) => ({
       background: T.surface, border: `1.5px solid ${err ? T.accent : T.border}`,
       borderRadius: 10, padding: "13px 14px", color: T.text,
@@ -609,7 +558,19 @@ function detectLang() {
             applicant_name: `${form.first_name} ${form.last_name}`,
             status: "pending"
           }]);
-          alert("✅ Aplikasyon soumèt! Admin pral revize epi ou ap resevwa yon email lè yo apwouve ou.");
+          // Voye email konfirmasyon
+          try {
+            await fetch("https://rhtbmqixkpkhubmkfefx.supabase.co/functions/v1/send-approval-email", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "Authorization": `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJodGJtcWl4a3BraHVibWtmZWZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NTM3NjYsImV4cCI6MjA5MzAyOTc2Nn0.23EJqlFpgauW_iDCYkywCnCzH9QL_Y-Nz_hlD10VN2A` },
+              body: JSON.stringify({
+                type: "driver_received",
+                to: form.email,
+                name: form.first_name,
+              }),
+            });
+          } catch(e) { console.log("Email error:", e); }
+          alert("✅ Aplikasyon soumèt! Tcheke email ou — nou voye yon konfirmasyon. Admin pral revize epi ou ap resevwa yon dezyèm email lè yo apwouve ou.");
           window.location.href = "/";
         } catch(err) {
           if (err.message.includes("already registered") || err.message.includes("deja egziste")) {
@@ -727,7 +688,19 @@ function detectLang() {
             applicant_name: form.restaurant_name,
             status: "pending"
           }]);
-          alert("✅ Aplikasyon soumèt! Admin pral revize epi ou ap resevwa yon email lè yo apwouve restoran ou.");
+          // Voye email konfirmasyon
+          try {
+            await fetch("https://rhtbmqixkpkhubmkfefx.supabase.co/functions/v1/send-approval-email", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "Authorization": `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJodGJtcWl4a3BraHVibWtmZWZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NTM3NjYsImV4cCI6MjA5MzAyOTc2Nn0.23EJqlFpgauW_iDCYkywCnCzH9QL_Y-Nz_hlD10VN2A` },
+              body: JSON.stringify({
+                type: "restaurant_received",
+                to: form.email,
+                name: form.restaurant_name,
+              }),
+            });
+          } catch(e) { console.log("Email error:", e); }
+          alert("✅ Aplikasyon soumèt! Tcheke email ou — nou voye yon konfirmasyon. Admin pral revize epi ou ap resevwa yon dezyèm email lè yo apwouve restoran ou.");
           window.location.href = "/";
         } catch(err) {
           if (err.message.includes("already registered") || err.message.includes("deja egziste")) {
@@ -788,85 +761,7 @@ function detectLang() {
     }
 
     // ─── MAIN APP ─────────────────────────────────────────────────────────────
-    function AdminPanel({ onLogout }) {
-  return (
-    <div style={{
-      padding: 20,
-      color: "#fff",
-      minHeight: "100vh",
-      background: "linear-gradient(160deg,#003F87 0%,#002D63 45%,#D01C1F 100%)",
-      fontFamily: "DM Sans"
-    }}>
-
-      <div style={{
-        textAlign: "center",
-        marginBottom: 30
-      }}>
-  <img
-    src="/apple-touch-icon.png"
-    alt="Rapid Delivri"
-    style={{
-      width: 140,
-      height: 140,
-      objectFit: "contain",
-      borderRadius: 22,
-      marginBottom: 10
-  }}
-/>
-        
- <h1>Rapid Delivri Admin</h1>
-        <p>Dashboard Administratè</p>
-      </div>
-
-      <div style={{
-        background: "rgba(255,255,255,0.1)",
-        padding: 20,
-        borderRadius: 20,
-        marginBottom: 20
-      }}>
-        <h2>👥 Users</h2>
-        <p>Jere kliyan, chofè ak restoran</p>
-      </div>
-
-      <div style={{
-        background: "rgba(255,255,255,0.1)",
-        padding: 20,
-        borderRadius: 20,
-        marginBottom: 20
-      }}>
-        <h2>🍽 Restaurants</h2>
-        <p>Approve oswa retire restoran</p>
-      </div>
-
-      <div style={{
-        background: "rgba(255,255,255,0.1)",
-        padding: 20,
-        borderRadius: 20,
-        marginBottom: 20
-      }}>
-        <h2>🚗 Drivers</h2>
-        <p>Verifye dokiman chofè yo</p>
-      </div>
-
-      <button
-        onClick={onLogout}
-        style={{
-          width: "100%",
-          padding: 16,
-          border: "none",
-          borderRadius: 16,
-          background: "#FFD700",
-          color: "#000",
-          fontWeight: 800,
-          cursor: "pointer"
-        }}
-      >
-        Dekonekte
-      </button>
-
-    </div>
-  );
-}function App() {
+    function App() {
       const [screen, setScreen] = useState("home");
       const [currentUser, setCurrentUser] = useState(null);
       const [userRole, setUserRole] = useState(null);
@@ -882,25 +777,14 @@ function detectLang() {
         supabase.auth.getSession().then(({ data: { session } }) => {
           if (session?.user) {
             setCurrentUser(session.user);
-            if (session.user.email === "rapiddelivri@gmail.com") {
-  setUserRole("admin");
-} else {
-  setUserRole(session.user.raw_user_meta_data?.role || "customer");
-}
+            setUserRole(session.user.user_metadata?.role || "customer");
           }
         });
       }, []);
 
       // Already logged in - show profile options
       if (currentUser && screen !== "reset") {
-       if (userRole === "admin") {
-  return <AdminPanel onLogout={() => {
-    supabase.auth.signOut();
-    setCurrentUser(null);
-    setUserRole(null);
-    setScreen("home");
-  }} />;
-} if (screen === "edit") return <EditProfile user={currentUser} role={userRole} onBack={() => setScreen("loggedin")} />;
+        if (screen === "edit") return <EditProfile user={currentUser} role={userRole} onBack={() => setScreen("loggedin")} />;
         return (
           <div style={{ maxWidth: 480, margin: "0 auto", background: "#EEF2FF", minHeight: "100vh" }}>
             <Header title="⚙️ Kont Mwen" />
@@ -939,18 +823,7 @@ function detectLang() {
       return (
         <div style={{ maxWidth: 480, margin: "0 auto", fontFamily: "DM Sans", minHeight: "100vh", background: `linear-gradient(160deg, ${T.primary} 0%, ${T.primaryDark} 45%, ${T.accent} 100%)`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24 }}>
           <div style={{ textAlign: "center", marginBottom: 32 }}>
-            <div style={{ marginBottom: 12 }}>
-  <img
-    src="/apple-touch-icon.png"
-    alt="Rapid Delivri"
-    style={{
-      width: 140,
-      height: 140,
-      objectFit: "contain",
-      borderRadius: 22
-    }}
-  />
-</div>
+            <div style={{ fontSize: 52, marginBottom: 8 }}>🛵</div>
             <div style={{ fontSize: 24, fontWeight: 900, color: "#fff", letterSpacing: "-0.5px" }}>Rapid Delivri</div>
             <div style={{ color: "rgba(255,255,255,0.7)", fontSize: 14, marginTop: 6 }}>🇭🇹 Indianapolis Haitian Food Platform</div>
           </div>
