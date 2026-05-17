@@ -1742,7 +1742,6 @@ if (screen === "restaurant") return (
             </div>
           </div>
         </div>
-
         {/* Totals */}
         <div style={s.card}>
           <div style={{ padding: 20 }}>
@@ -1758,7 +1757,7 @@ if (screen === "restaurant") return (
                 <span style={{ color: T.muted, fontSize: 14 }}>{label}</span>
                 <span style={{ color, fontSize: 14 }}>${Number(val).toFixed(2)}</span>
               </div>
-            ))}
+            )}
             <div style={{ height: 1, background: T.border, margin: "12px 0" }} />
             <div style={s.row}>
               <span style={{ fontWeight: 900, fontSize: 18 }}>{L.grandTotal}</span>
