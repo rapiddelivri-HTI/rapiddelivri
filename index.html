@@ -1725,32 +1725,30 @@ if (screen === "restaurant") return (
         </div>
 
         {/* Tip */}
-        <div style={s.card}>
-          <div style={{ padding: 20 }}>
-            <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 16 }}>{L.driverTip}</div>
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              {DRIVER_TIPS.map((t) => (
-  <button
-    key={t}
-    className="btn-press"
-    onClick={() => setTip(t)}
-    style={{
-      background:
-        tip === t
-          ? `linear-gradient(135deg, ${T.accent}, #FFD700)`
-          : T.card,
-      color: tip === t ? "#000" : T.text,
-      border: `2px solid ${tip === t ? T.accent : T.border}`,
-      borderRadius: 10,
-      padding: "10px 16px",
-      cursor: "pointer"
-    }}
-  >
-    {t === 0 ? L.noTip : `$$${t}`}
-  </button>
-))}
-            </div>
-          </div>
+<div style={s.card}>
+  <div style={{ padding: 20 }}>
+    <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 16 }}>{L.driverTip}</div>
+    <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+      {DRIVER_TIPS.map((t) => (
+        <button
+          key={t}
+          className="btn-press"
+          onClick={() => setTip(t)}
+          style={{
+            background: tip === t ? `linear-gradient(135deg, ${T.accent}, #FFD700)` : T.card,
+            color: tip === t ? "#000" : T.text,
+            border: `2px solid ${tip === t ? T.accent : T.border}`,
+            borderRadius: 10,
+            padding: "10px 16px",
+            cursor: "pointer",
+          }}
+        >
+          {t === 0 ? L.noTip : `$${t}`}
+        </button>
+      ))}
+    </div>
+  </div>
+</div>
         {/* Totals */}
         <div style={s.card}>
           <div style={{ padding: 20 }}>
