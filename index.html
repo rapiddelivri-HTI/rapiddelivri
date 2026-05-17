@@ -1723,7 +1723,6 @@ if (screen === "restaurant") return (
             ))}
           </div>
         </div>
-
         {/* Tip */}
 <div style={s.card}>
   <div style={{ padding: 20 }}>
@@ -1764,7 +1763,7 @@ if (screen === "restaurant") return (
                 <span style={{ color: T.muted, fontSize: 14 }}>{label}</span>
                 <span style={{ color, fontSize: 14 }}>${Number(val).toFixed(2)}</span>
               </div>
-              )))}
+              ))}
               </div>
             <div style={{ height: 1, background: T.border, margin: "12px 0" }} />
             <div style={s.row}>
@@ -1784,7 +1783,7 @@ if (screen === "restaurant") return (
               <span style={{ fontSize: 13, color: T.muted }}>{label}</span>
               <span style={{ fontSize: 13, color, fontWeight: 700 }}>${val.toFixed(2)}</span>
             </div>
-            )))}
+            ))}
         </div>
         <div style={{ padding: "0 16px 16px" }}>
           <button className="btn-press" style={s.btnGold} onClick={() => setScreen("checkout")}>
