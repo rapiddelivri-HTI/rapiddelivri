@@ -722,8 +722,8 @@ function RapidDelivri() {
 
   const cartItems = selectedRestaurant ? selectedRestaurant.items.filter(i => cart[i.id]) : [];
   const subtotal = cartItems.reduce((s, i) => s + i.price * cart[i.id], 0);
-  const tax = subtotal * (selectedRestaurant?.tax || 0.07);
-  const deliveryFee = orderType === "delivery" ? (selectedRestaurant?.fee || 0) : 0;
+  const tax = subtotal * ((selectedRestaurant && selectedRestaurant.tax) || 0.07);
+  const deliveryFee = orderType === "delivery" ? ((selectedRestaurant && selectedRestaurant.fee) || 0) : 0;
   const grandTotal = subtotal + tax + PLATFORM_FEE + deliveryFee + tip;
   const cartCount = Object.values(cart).reduce((a, b) => a + b, 0);
 
@@ -755,7 +755,7 @@ function RapidDelivri() {
       setOrderPlaced(true);
       setScreen("tracking");
       setOrderStatus(1);
-      pushNotif({ icon: "✅", title: "Kòmand Resevwa!", body: `${selectedRestaurant?.name} ap prepare manje ou`, tag: "SMS", color: T.green });
+      pushNotif({ icon: "✅", title: "Kòmand Resevwa!", body: `${(selectedRestaurant && selectedRestaurant.name)} ap prepare manje ou`, tag: "SMS", color: T.green });
       return;
     }
 
@@ -774,7 +774,7 @@ function RapidDelivri() {
           driverTip: tip,
           grandTotal,
           orderType,
-          restaurantName: selectedRestaurant?.name,
+          restaurantName: (selectedRestaurant && selectedRestaurant.name),
           customerEmail: email,
         }),
       });
@@ -787,7 +787,7 @@ function RapidDelivri() {
       setOrderPlaced(true);
       setScreen("tracking");
       setOrderStatus(1);
-      pushNotif({ icon: "✅", title: "Kòmand Resevwa!", body: `${selectedRestaurant?.name} ap prepare manje ou`, tag: "SMS", color: T.green });
+      pushNotif({ icon: "✅", title: "Kòmand Resevwa!", body: `${(selectedRestaurant && selectedRestaurant.name)} ap prepare manje ou`, tag: "SMS", color: T.green });
       setTimeout(() => {
         setOrderStatus(2);
         pushNotif({ icon: "🍳", title: "Restoran Konfime", body: "Manje ou ap prepare kounye a", tag: "EMAIL", color: "#F4A261" });
@@ -875,67 +875,69 @@ function RapidDelivri() {
     </div>
   );
 
+  const loadAdminData = async () => {
+    setLoading(true);
+    try {
+      // Load pending approvals
+      const { data: approvals } = await supabase
+        .from('admin_approvals')
+        .select('*')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
+      // Load drivers pending
+      const { data: drivers } = await supabase
+        .from('drivers')
+        .select('*')
+        .eq('is_approved', false)
+        .order('created_at', { ascending: false });
+
+      // Load restaurants pending
+      const { data: restaurants } = await supabase
+        .from('restaurants')
+        .select('*')
+        .eq('is_approved', false)
+        .order('created_at', { ascending: false });
+
+      // Load all customers
+      const { data: customers } = await supabase
+        .from('customers')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      // Load orders
+      const { data: orders } = await supabase
+        .from('orders')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      // Stats
+      const { count: custCount } = await supabase.from('customers').select('*', { count: 'exact', head: true });
+      const { count: drivCount } = await supabase.from('drivers').select('*', { count: 'exact', head: true });
+      const { count: restCount } = await supabase.from('restaurants').select('*', { count: 'exact', head: true });
+      const { count: ordCount } = await supabase.from('orders').select('*', { count: 'exact', head: true });
+
+      setPendingDrivers(drivers || []);
+      setPendingRestaurants(restaurants || []);
+      setAllCustomers(customers || []);
+      setAllOrders(orders || []);
+      setStats({
+        customers: custCount || 0,
+        drivers: drivCount || 0,
+        restaurants: restCount || 0,
+        orders: ordCount || 0,
+        revenue: (orders || []).reduce((s, o) => s + (parseFloat(o.grand_total) || 0), 0)
+      });
+    } catch (err) {
+      console.error('Admin load error:', err);
+    }
+    setLoading(false);
+  }
+
   // ── ADMIN DASHBOARD ──────────────────────────────────────────────────────
   if (screen === "admin") {
-    const loadAdminData = async () => {
-      setLoading(true);
-      try {
-        // Load pending approvals
-        const { data: approvals } = await supabase
-          .from('admin_approvals')
-          .select('*')
-          .eq('status', 'pending')
-          .order('created_at', { ascending: false });
-
-        // Load drivers pending
-        const { data: drivers } = await supabase
-          .from('drivers')
-          .select('*')
-          .eq('is_approved', false)
-          .order('created_at', { ascending: false });
-
-        // Load restaurants pending
-        const { data: restaurants } = await supabase
-          .from('restaurants')
-          .select('*')
-          .eq('is_approved', false)
-          .order('created_at', { ascending: false });
-
-        // Load all customers
-        const { data: customers } = await supabase
-          .from('customers')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        // Load orders
-        const { data: orders } = await supabase
-          .from('orders')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(50);
-
-        // Stats
-        const { count: custCount } = await supabase.from('customers').select('*', { count: 'exact', head: true });
-        const { count: drivCount } = await supabase.from('drivers').select('*', { count: 'exact', head: true });
-        const { count: restCount } = await supabase.from('restaurants').select('*', { count: 'exact', head: true });
-        const { count: ordCount } = await supabase.from('orders').select('*', { count: 'exact', head: true });
-
-        setPendingDrivers(drivers || []);
-        setPendingRestaurants(restaurants || []);
-        setAllCustomers(customers || []);
-        setAllOrders(orders || []);
-        setStats({
-          customers: custCount || 0,
-          drivers: drivCount || 0,
-          restaurants: restCount || 0,
-          orders: ordCount || 0,
-          revenue: (orders || []).reduce((s, o) => s + (parseFloat(o.grand_total) || 0), 0)
-        });
-      } catch (err) {
-        console.error('Admin load error:', err);
-      }
-      setLoading(false);
-    };
+;
 
     const approveDriver = async (driver) => {
       await supabase.from('drivers').update({ is_approved: true, is_active: true, approval_date: new Date().toISOString(), approved_by: 'Admin' }).eq('id', driver.id);
@@ -1114,7 +1116,6 @@ function RapidDelivri() {
         </div>
         <button style={{ background: "none", border: "none", color: "#ffffff66", marginTop: 24, cursor: "pointer", fontFamily: T.font, fontSize: 14 }} onClick={() => setScreen("role")}>← Retounen</button>
       </div>
-    </div>
     );
 
     return (
@@ -1532,7 +1533,7 @@ if (screen === "restaurant") return (
                 <div style={{ fontWeight: 800, fontSize: 16 }}>Kòmand #RD-2847</div>
                 <div style={{ background: T.accent, color: "#000", borderRadius: 20, padding: "3px 12px", fontSize: 12, fontWeight: 700 }}>{L.newOrder}</div>
               </div>
-              <div style={{ color: T.muted, fontSize: 13, marginTop: 6 }}>{selectedRestaurant?.name} → 3842 N Meridian St</div>
+              <div style={{ color: T.muted, fontSize: 13, marginTop: 6 }}>{(selectedRestaurant && selectedRestaurant.name)} → 3842 N Meridian St</div>
               <div style={{ ...s.row, marginTop: 16 }}>
                 <div style={s.tag}>📍 2.3 mil</div>
                 <div style={s.tag}>⏱ ~18 min</div>
@@ -1557,7 +1558,7 @@ if (screen === "restaurant") return (
               <div style={{ marginTop: 16, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 <div style={{ background: T.surface, borderRadius: 12, padding: 14 }}>
                   <div style={{ fontSize: 11, color: T.muted, fontWeight: 700, marginBottom: 6 }}>{L.pickup2}</div>
-                  <div style={{ fontWeight: 700, fontSize: 14 }}>{selectedRestaurant?.name}</div>
+                  <div style={{ fontWeight: 700, fontSize: 14 }}>{(selectedRestaurant && selectedRestaurant.name)}</div>
                   <div style={{ color: T.muted, fontSize: 12 }}>1204 E Washington St</div>
                 </div>
                 <div style={{ background: T.surface, borderRadius: 12, padding: 14 }}>
@@ -1606,7 +1607,7 @@ if (screen === "restaurant") return (
   if (screen === "tracking") {
     const steps = [
       { icon: "✅", label: L.orderReceived, sub: L.paymentConfirmed, done: orderStatus >= 1 },
-      { icon: "🍳", label: L.preparing, sub: selectedRestaurant?.name, done: orderStatus >= 2 },
+      { icon: "🍳", label: L.preparing, sub: (selectedRestaurant && selectedRestaurant.name), done: orderStatus >= 2 },
       { icon: "🚗", label: L.driverOnWay, sub: L.driverComing, done: orderStatus >= 3 },
       { icon: "🎉", label: L.delivered, sub: L.enjoyMeal, done: orderStatus >= 4 },
     ];
