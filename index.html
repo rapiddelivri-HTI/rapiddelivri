@@ -1896,32 +1896,37 @@ if (screen === "restaurant") return (
             <div key={c} style={{ background: "#fff", border: `1px solid ${T.border}`, borderRadius: 20, padding: "8px 16px", fontSize: 16, fontWeight: 600, whiteSpace: "nowrap", cursor: "pointer", flexShrink: 0, color: T.text, boxShadow: "0 1px 4px #00000011" }}>{c}</div>
           ))}
         </div>
-        <div style={{ ...s.title, color: T.text }}>{L.restaurants}</div>
-        {RESTAURANTS.map(r => (
-          <div key={r.id} style={{ ...s.card, cursor: "pointer", boxShadow: "0 2px 12px #00000011" }} className="card-hover"
-            onClick={() => { setSelectedRestaurant(r); setCart({}); setScreen("menu"); }}>
-            <div style={{ padding: 20 }}>
-              <div style={s.row}>
-                <div style={{ display: "flex", gap: 16, alignItems: "center", flex: 1 }}>
-                  <div style={{ fontSize: 44, background: r.color + "18", borderRadius: 16, padding: "10px 14px", border: `1px solid ${r.color}33`, flexShrink: 0 }}>{r.image}</div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 800, fontSize: 16, color: T.text }}>{r.name}</div>
-                    <div style={{ color: T.muted, fontSize: 13, marginTop: 3 }}>{r.cuisine}</div>
-                    <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-                      <div style={s.tag}>⭐ {r.rating}</div>
-                      <div style={s.tag}>⏱ {r.time}</div>
-                      <div style={s.tag}>🚗 ${r.fee}</div>
-                    </div>
+              <div style={s.title, color: T.text}>{L.restaurants}</div>
+      {RESTAURANTS.map(r => (
+        <div
+          key={r.id}
+          style={{ ...s.card, cursor: "pointer", boxShadow: "0 2px 12px #00000011" }}
+          className="card-hover"
+          onClick={() => { setSelectedRestaurant(r); setCart({}); setScreen("menu"); }}
+        >
+          <div style={{ padding: 20 }}>
+            <div style={s.row}>
+              <div style={{ display: "flex", gap: 16, alignItems: "center", flex: 1 }}>
+                <div style={{ fontSize: 44, background: r.color + "18", borderRadius: 16, padding: "10px 14px", border: `1px solid ${r.color}33`, flexShrink: 0 }}>{r.image}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 800, fontSize: 16, color: T.text }}>{r.name}</div>
+                  <div style={{ color: T.muted, fontSize: 13, marginTop: 3 }}>{r.cuisine}</div>
+                  <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                    <div style={s.tag}>⭐ {r.rating}</div>
+                    <div style={s.tag}>⏱ {r.time}</div>
+                    <div style={s.tag}>🚗 ${r.fee}</div>
                   </div>
                 </div>
-                <span style={{ color: T.primary, fontSize: 22 }}>›</span>
               </div>
+              <span style={{ color: T.primary, fontSize: 22 }}>›</span>
             </div>
-            ))}
-            <Toast notif={notif} />
-            </div>
-            );
-            }
+          </div>
+        </div>
+      ))}
+      <Toast notif={notif} />
+    </div>
+  );
+}
       const root = ReactDOM.createRoot(document.getElementById('root'));
       root.render(<RapidDelivri />);
       </script>
