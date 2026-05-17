@@ -1730,7 +1730,7 @@ if (screen === "restaurant") return (
     <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 16 }}>{L.driverTip}</div>
     <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
       {DRIVER_TIPS.map((t) => (
-        <button
+        <button>
           key={t}
           className="btn-press"
           onClick={() => setTip(t)}
