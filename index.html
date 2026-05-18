@@ -186,7 +186,7 @@ const TRANSLATIONS = {
   },
   ht: {
     customer: "Mwen se Kliyan",
-    driver: "Mwen se Chaofè",
+    driver: "Mwen se Chofè",
     restaurant: "Mwen se Restoran",
     platform: "Indianapolis Ayisyen Food Platform",
     location: "🇭🇹 Indianapolis, Indiana",
@@ -210,18 +210,18 @@ const TRANSLATIONS = {
     state: "ETA",
     zip: "ZIP",
     items: "🛒 Atik ou yo",
-    driverTip: "🚗 Tip pou Chaofè",
+    driverTip: "🚗 Tip pou Chofè",
     noTip: "Pa gen",
     total: "💰 Total",
     subtotal: "Subtotal",
     restaurantTax: "Tax Restoran (7%)",
     platformFee: "Platform Fee",
     deliveryFee: "Delivery Fee",
-    tipLabel: "Tip Chaofè",
+    tipLabel: "Tip Chofè",
     grandTotal: "Grand Total",
     distribution: "💵 DISTRIBISYON LAJAN",
     restaurantEarns: "🍴 Restoran",
-    driverEarns: "🚗 Chaofè (70%)",
+    driverEarns: "🚗 Chofè (70%)",
     platformEarns: "👑 Platform (30% + fee)",
     stripeBtn: (t) => `🔒 Ale sou Stripe — $${t}`,
     securePayment: "🔒 Peman Sekirize",
@@ -239,13 +239,13 @@ const TRANSLATIONS = {
     orderReceived: "Kòmand Resevwa",
     paymentConfirmed: "Peman konfime",
     preparing: "Ap Prepare",
-    driverOnWay: "Chaofè Sou Wout",
-    driverComing: "Chaofè ap vini",
+    driverOnWay: "Chofè Sou Wout",
+    driverComing: "Chofè ap vini",
     delivered: "Livre!",
     enjoyMeal: "Bon apeti! 🍽️",
     backHome: "← Retounen Lakay",
     notifications2: "🔔 Notifikasyon Resevwa",
-    driverDash: "Chaofè Dashboard",
+    driverDash: "Chofè Dashboard",
     online: "ONLINE",
     exit: "Sòti",
     today: "Jodi a",
@@ -267,7 +267,7 @@ const TRANSLATIONS = {
     preparingBadge: "✅ Prepare",
     confirmOrder: "{L.confirmOrder}",
     youReceive: "Ou Resevwa",
-    driverOnWay2: "🍳 Ap prepare — Chaofè sou wout!",
+    driverOnWay2: "🍳 Ap prepare — Chofè sou wout!",
     noOrders: "Pa gen kòmand pou kounye a",
     waitingNotif: "W ap resevwa yon notifikasyon",
     notifLog: "🔔 Notifikasyon",
@@ -680,10 +680,18 @@ function Toast({ notif }) {
 
 // ─── MAIN APP ────────────────────────────────────────────────────────────────
 function RapidDelivri() {
-  const [screen, setScreen] = useState("role");
+  const [screen, setScreen] = useState("auth");
   const [role, setRole] = useState(null);
   const [lang, setLang] = useState(() => detectLang());
   const L = TRANSLATIONS[lang] || TRANSLATIONS.en;
+  const [authMode, setAuthMode] = useState("signin");
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authName, setAuthName] = useState("");
+  const [authRole, setAuthRole] = useState("customer");
+  const [authError, setAuthError] = useState("");
+  const OWNER_EMAIL = "admin@rapiddelivri.com"; // Change later with environment/backend auth
+  const OWNER_PASSWORD = "RapidAdmin123!"; // Demo password only for initial testing
   const [adminAuth, setAdminAuth] = useState(false);
   const [adminPin, setAdminPin] = useState("");
   const [adminTab, setAdminTab] = useState("dashboard");
@@ -738,7 +746,7 @@ function RapidDelivri() {
     gpsInterval.current = setInterval(() => {
       prog += 0.04;
       setDriverProgress(Math.min(prog, 1));
-      if (prog >= 0.5 && prog < 0.54) pushNotif({ icon: "📍", title: "Chaofè Pre!", body: "Chaofè ou a prèske rive!", tag: "GPS", color: T.primary });
+      if (prog >= 0.5 && prog < 0.54) pushNotif({ icon: "📍", title: "Chofè Pre!", body: "Chofè ou a prèske rive!", tag: "GPS", color: T.primary });
       if (prog >= 1) {
         clearInterval(gpsInterval.current);
         setOrderStatus(4);
@@ -794,7 +802,7 @@ function RapidDelivri() {
       }, 3000);
       setTimeout(() => {
         setOrderStatus(3);
-        pushNotif({ icon: "🚗", title: "Chaofè Sou Wout!", body: "Jean-Pierre ap vini ak manje ou", tag: "SMS", color: T.primary });
+        pushNotif({ icon: "🚗", title: "Chofè Sou Wout!", body: "Jean-Pierre ap vini ak manje ou", tag: "SMS", color: T.primary });
         startGPS();
       }, 6000);
     }
@@ -839,6 +847,120 @@ function RapidDelivri() {
     divider: { height: 1, background: T.border, margin: "0 20px" },
   };
 
+  const goToRoleHome = (nextRole) => {
+    setRole(nextRole);
+    if (nextRole === "driver") setScreen("driver");
+    else if (nextRole === "restaurant") setScreen("restaurant");
+    else setScreen("home");
+  };
+
+  const submitAuth = () => {
+    const emailClean = authEmail.trim().toLowerCase();
+    setAuthError("");
+
+    if (authMode === "admin") {
+      if (emailClean === OWNER_EMAIL && authPassword === OWNER_PASSWORD) {
+        setAdminAuth(true);
+        setRole("admin");
+        setScreen("admin");
+        setAuthPassword("");
+      } else {
+        setAuthError("Email oswa modpas admin lan pa bon.");
+      }
+      return;
+    }
+
+    if (!emailClean || !authPassword || (authMode === "signup" && !authName.trim())) {
+      setAuthError("Tanpri ranpli tout chan ki nesesè yo.");
+      return;
+    }
+
+    // Public users can ONLY be Customer, Driver, or Restaurant.
+    // Admin is never selectable on public Sign Up / Sign In.
+    if (!["customer", "driver", "restaurant"].includes(authRole)) {
+      setAuthError("Wòl sa a pa otorize pou piblik la.");
+      return;
+    }
+
+    goToRoleHome(authRole);
+  };
+
+  // ── AUTH SCREEN ──────────────────────────────────────────────────────────
+  if (screen === "auth") return (
+    <div style={{ ...s.app, display: "flex", flexDirection: "column", minHeight: "100vh", padding: 22, background: "linear-gradient(160deg, #003F87 0%, #002D63 48%, #D01C1F 100%)" }}>
+      <style>{css}</style>
+      <div style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 18 }}>
+        {[["en","🇺🇸"],["ht","🇭🇹"],["es","🇪🇸"],["fr","🇫🇷"],["pt","🇧🇷"]].map(([code, flag]) => (
+          <button key={code} onClick={() => setLang(code)} style={{
+            background: lang === code ? "#fff" : "#ffffff22",
+            border: lang === code ? "2px solid #FFD700" : "1px solid #ffffff44",
+            borderRadius: 8, padding: "6px 10px", cursor: "pointer", fontSize: 18,
+            fontFamily: T.font
+          }}>{flag}</button>
+        ))}
+      </div>
+
+      <div className="slide-up" style={{ textAlign: "center", margin: "10px 0 22px" }}>
+        <LogoSVG height={88} style={{ margin: "0 auto 8px" }} />
+        <div style={{ color: "#fff", fontSize: 23, fontWeight: 900, letterSpacing: "-0.4px" }}>Rapid Delivri Food</div>
+        <div style={{ color: "#ffffffaa", marginTop: 6, fontSize: 14 }}>Konekte oswa kreye kont ou pou kòmanse kòmande.</div>
+      </div>
+
+      <div className="slide-up" style={{ background: "#fff", borderRadius: 24, padding: 18, boxShadow: "0 20px 60px #001a3d55" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14 }}>
+          <button onClick={() => { setAuthMode("signin"); setAuthError(""); }} style={{ ...s.btn, padding: "12px", borderRadius: 14, background: authMode === "signin" ? T.primary : "#F1F5FF", color: authMode === "signin" ? "#fff" : T.primary }}>Sign In</button>
+          <button onClick={() => { setAuthMode("signup"); setAuthError(""); }} style={{ ...s.btn, padding: "12px", borderRadius: 14, background: authMode === "signup" ? T.accent : "#FFF1F2", color: authMode === "signup" ? "#fff" : T.accent }}>Sign Up</button>
+        </div>
+
+        {authMode === "admin" && (
+          <div style={{ background: "#FFF8DB", border: "1px solid #FACC15", borderRadius: 14, padding: 12, marginBottom: 12, color: "#7A5600", fontWeight: 700, fontSize: 13 }}>
+            👑 Owner/Admin sèlman. Admin pa parèt sou public Sign Up.
+          </div>
+        )}
+
+        {authMode === "signup" && (
+          <input value={authName} onChange={e => setAuthName(e.target.value)} placeholder="Non konplè" style={{ width: "100%", padding: "14px", borderRadius: 14, border: `1px solid ${T.border}`, marginBottom: 10, fontFamily: T.font, fontSize: 15 }} />
+        )}
+
+        <input value={authEmail} onChange={e => setAuthEmail(e.target.value)} placeholder="Email" type="email" style={{ width: "100%", padding: "14px", borderRadius: 14, border: `1px solid ${T.border}`, marginBottom: 10, fontFamily: T.font, fontSize: 15 }} />
+        <input value={authPassword} onChange={e => setAuthPassword(e.target.value)} placeholder="Modpas" type="password" style={{ width: "100%", padding: "14px", borderRadius: 14, border: `1px solid ${T.border}`, marginBottom: 10, fontFamily: T.font, fontSize: 15 }} />
+
+        {authMode !== "admin" && (
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 12, color: T.muted, fontWeight: 800, marginBottom: 8, textTransform: "uppercase" }}>Chwazi tip kont ou</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 8 }}>
+              {[
+                ["customer", "👤 Kliyan"],
+                ["driver", "🚗 Chofè"],
+                ["restaurant", "🍴 Restoran"]
+              ].map(([val, label]) => (
+                <button key={val} onClick={() => setAuthRole(val)} style={{
+                  textAlign: "left", padding: "13px 14px", borderRadius: 14, cursor: "pointer", fontFamily: T.font,
+                  border: authRole === val ? `2px solid ${T.primary}` : `1px solid ${T.border}`,
+                  background: authRole === val ? "#EEF4FF" : "#fff", color: T.text, fontWeight: 800
+                }}>{label}</button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {authError && <div style={{ color: T.accent, fontWeight: 800, fontSize: 13, marginBottom: 10 }}>{authError}</div>}
+
+        <button className="btn-press" onClick={submitAuth} style={{ ...s.btn, width: "100%", background: authMode === "admin" ? "#111827" : T.accent, color: "#fff", marginTop: 2 }}>
+          {authMode === "signup" ? "Kreye kont" : authMode === "admin" ? "Konekte kòm Admin" : "Konekte"}
+        </button>
+
+        <button onClick={() => { setAuthMode(authMode === "admin" ? "signin" : "admin"); setAuthError(""); }} style={{ background: "none", border: "none", color: T.primary, fontWeight: 800, marginTop: 14, width: "100%", cursor: "pointer", fontFamily: T.font }}>
+          {authMode === "admin" ? "← Tounen sou Sign In" : "Owner/Admin Login"}
+        </button>
+
+        <div style={{ marginTop: 14, color: T.muted, fontSize: 12, lineHeight: 1.45, textAlign: "center" }}>
+          Public Sign Up la gen sèlman Kliyan, Chofè, ak Restoran. Admin pwoteje apa.
+        </div>
+      </div>
+    </div>
+  );
+
   // ── ROLE SELECT ──────────────────────────────────────────────────────────
   if (screen === "role") return (
     <div style={{ ...s.app, display: "flex", flexDirection: "column", justifyContent: "center", minHeight: "100vh", padding: 24, background: "linear-gradient(160deg, #003F87 0%, #002D63 45%, #D01C1F 100%)" }}>
@@ -867,9 +989,6 @@ function RapidDelivri() {
         </button>
         <button className="btn-press" style={{ ...s.btnGhost, background: "#ffffff22", color: "#fff", border: "1px solid #ffffff44" }} onClick={() => { setRole("restaurant"); setScreen("restaurant"); }}>
           🍴 {L.restaurant}
-        </button>
-        <button className="btn-press" style={{ background: "#FFD70022", color: "#FFD700", border: "1px solid #FFD70066", borderRadius: 14, padding: "14px", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: T.font }} onClick={() => { setRole("admin"); setScreen("admin"); }}>
-          👑 Admin / Owner
         </button>
       </div>
     </div>
@@ -951,7 +1070,7 @@ function RapidDelivri() {
         await fetch('https://rhtbmqixkpkhubmkfefx.supabase.co/functions/v1/send-approval-email', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJodGJtcWl4a3BraHVibWtmZWZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NTM3NjYsImV4cCI6MjA5MzAyOTc2Nn0.23EJqlFpgauW_iDCYkywCnCzH9QL_Y-Nz_hlD10VN2A` }, body: JSON.stringify({ type: 'driver_approved', to: driver.email, name: driver.first_name, stripeLink }) });
       } catch(e) { console.log('Stripe/email error:', e); }
       loadAdminData();
-      pushNotif({ icon: "✅", title: "Chaofè Apwouve!", body: `${driver.first_name} — Email + Stripe voye!`, tag: "ADMIN", color: T.green });
+      pushNotif({ icon: "✅", title: "Chofè Apwouve!", body: `${driver.first_name} — Email + Stripe voye!`, tag: "ADMIN", color: T.green });
     };
 
     const rejectDriver = async (driver) => {
@@ -959,7 +1078,7 @@ function RapidDelivri() {
       await supabase.from('admin_approvals').update({ status: 'rejected', admin_notes: rejectReason, reviewed_at: new Date().toISOString() }).eq('applicant_id', driver.id);
       try { await fetch('https://rhtbmqixkpkhubmkfefx.supabase.co/functions/v1/send-approval-email', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJodGJtcWl4a3BraHVibWtmZWZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NTM3NjYsImV4cCI6MjA5MzAyOTc2Nn0.23EJqlFpgauW_iDCYkywCnCzH9QL_Y-Nz_hlD10VN2A` }, body: JSON.stringify({ type: 'driver_rejected', to: driver.email, name: driver.first_name, reason: rejectReason }) }); } catch(e) {}
       setShowRejectModal(null); setRejectReason(""); loadAdminData();
-      pushNotif({ icon: "❌", title: "Chaofè Rejte", body: driver.first_name, tag: "ADMIN", color: T.accent });
+      pushNotif({ icon: "❌", title: "Chofè Rejte", body: driver.first_name, tag: "ADMIN", color: T.accent });
     };
 
     const approveRestaurant = async (rest) => {
@@ -1121,7 +1240,7 @@ function RapidDelivri() {
               <div style={{ padding: "16px 16px 0", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 {[
                   { icon: "👥", label: "Kliyan", val: stats.customers, color: T.primary },
-                  { icon: "🚗", label: "Chaofè", val: stats.drivers, color: T.accent },
+                  { icon: "🚗", label: "Chofè", val: stats.drivers, color: T.accent },
                   { icon: "🍴", label: "Restoran", val: stats.restaurants, color: "#1a6b3a" },
                   { icon: "📦", label: "Kòmand", val: stats.orders, color: "#8B5CF6" },
                   { icon: "💰", label: "Revni Total", val: `$${stats.revenue.toFixed(2)}`, color: "#FFD700" },
@@ -1159,7 +1278,7 @@ function RapidDelivri() {
                   {/* Pending Drivers */}
                   {pendingDrivers.length > 0 && (
                     <>
-                      <div style={{ fontSize: 18, fontWeight: 800, padding: "20px 16px 8px" }}>🚗 Chaofè ({pendingDrivers.length})</div>
+                      <div style={{ fontSize: 18, fontWeight: 800, padding: "20px 16px 8px" }}>🚗 Chofè ({pendingDrivers.length})</div>
                       {pendingDrivers.map(d => (
                         <div key={d.id} style={as.card}>
                           <div style={{ padding: 20 }}>
@@ -1221,14 +1340,14 @@ function RapidDelivri() {
           {/* DRIVERS */}
           {adminTab === "drivers" && (
             <>
-              <div style={{ fontSize: 18, fontWeight: 800, padding: "20px 16px 8px" }}>🚗 Tout Chaofè ({stats.drivers})</div>
+              <div style={{ fontSize: 18, fontWeight: 800, padding: "20px 16px 8px" }}>🚗 Tout Chofè ({stats.drivers})</div>
               {loading ? <div style={{ textAlign: "center", padding: 40 }}>⏳</div> :
                 pendingDrivers.concat(
                   // Show approved drivers too
                 ).length === 0 && pendingDrivers.length === 0 ? (
                   <div style={{ textAlign: "center", padding: 60, color: T.muted }}>
                     <div style={{ fontSize: 48 }}>🚗</div>
-                    <div style={{ marginTop: 12 }}>Pa gen chaofè toujou</div>
+                    <div style={{ marginTop: 12 }}>Pa gen chofè toujou</div>
                   </div>
                 ) : (
                   pendingDrivers.map(d => (
@@ -1406,7 +1525,7 @@ if (screen === "restaurant") return (
               )}
               {orderStatus >= 2 && (
                 <div style={{ background: "#0D1F14", borderRadius: 12, padding: 14, marginTop: 16, textAlign: "center", color: T.green, fontSize: 14, fontWeight: 600 }}>
-                  🍳 Ap prepare — Chaofè sou wout!
+                  🍳 Ap prepare — Chofè sou wout!
                 </div>
               )}
             </div>
@@ -1448,7 +1567,7 @@ if (screen === "restaurant") return (
       <style>{css}</style>
       <div style={{ ...s.header, background: "#D01C1F", borderBottom: "1px solid #A81518" }}>
         <div style={s.row}>
-          <div style={{...s.logo, color:"#fff"}}>🚗 <span style={{ color: "#FFD700" }}>Chaofè</span></div>
+          <div style={{...s.logo, color:"#fff"}}>🚗 <span style={{ color: "#FFD700" }}>Chofè</span></div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ width: 8, height: 8, borderRadius: "50%", background: T.green }} className="pulse" />
             <span style={{ color: T.green, fontSize: 12, fontWeight: 700 }}>{L.online}</span>
