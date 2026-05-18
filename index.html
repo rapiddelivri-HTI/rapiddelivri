@@ -713,6 +713,8 @@ function RapidDelivri() {
   const [notifSent, setNotifSent] = useState(false);
   const [pendingDrivers, setPendingDrivers] = useState([]);
   const [pendingRestaurants, setPendingRestaurants] = useState([]);
+  const [allDrivers, setAllDrivers] = useState([]);
+  const [allRestaurants, setAllRestaurants] = useState([]);
   const [allCustomers, setAllCustomers] = useState([]);
   const [allOrders, setAllOrders] = useState([]);
   const [stats, setStats] = useState({ customers: 0, drivers: 0, restaurants: 0, orders: 0, revenue: 0 });
@@ -1018,6 +1020,18 @@ function RapidDelivri() {
           .eq('is_approved', false)
           .order('created_at', { ascending: false });
 
+        // Load all drivers for admin management
+        const { data: driversAll } = await supabase
+          .from('drivers')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        // Load all restaurants for admin management
+        const { data: restaurantsAll } = await supabase
+          .from('restaurants')
+          .select('*')
+          .order('created_at', { ascending: false });
+
         // Load all customers
         const { data: customers } = await supabase
           .from('customers')
@@ -1039,6 +1053,8 @@ function RapidDelivri() {
 
         setPendingDrivers(drivers || []);
         setPendingRestaurants(restaurants || []);
+        setAllDrivers(driversAll || drivers || []);
+        setAllRestaurants(restaurantsAll || restaurants || []);
         setAllCustomers(customers || []);
         setAllOrders(orders || []);
         setStats({
@@ -1118,6 +1134,30 @@ function RapidDelivri() {
       loadAdminData();
     };
 
+    const verifyCustomer = async (customer) => {
+      await supabase.from('customers').update({ is_verified: true, verified_at: new Date().toISOString(), verified_by: 'Admin' }).eq('id', customer.id);
+      loadAdminData();
+      pushNotif({ icon: "✅", title: "Kliyan Verifye", body: customer.email || "ID / Selfie verifye", tag: "ADMIN", color: T.green });
+    };
+
+    const refundOrder = async (order) => {
+      await supabase.from('orders').update({ refund_status: 'requested', refund_requested_by: 'Admin' }).eq('id', order.id);
+      loadAdminData();
+      pushNotif({ icon: "↩️", title: "Refund Make", body: `Kòmand #${order.order_number || order.id.slice(0,8)}`, tag: "ADMIN", color: T.accent });
+    };
+
+    const markPayoutPaid = async (order) => {
+      await supabase.from('orders').update({ payout_status: 'paid', payout_updated_by: 'Admin' }).eq('id', order.id);
+      loadAdminData();
+      pushNotif({ icon: "💸", title: "Payout Mete Paid", body: `Kòmand #${order.order_number || order.id.slice(0,8)}`, tag: "ADMIN", color: T.green });
+    };
+
+    const flagDispute = async (order) => {
+      await supabase.from('orders').update({ dispute_status: 'open', dispute_flagged_by: 'Admin' }).eq('id', order.id);
+      loadAdminData();
+      pushNotif({ icon: "⚠️", title: "Dispute Louvri", body: `Kòmand #${order.order_number || order.id.slice(0,8)}`, tag: "ADMIN", color: "#F59E0B" });
+    };
+
     const as = {
       card: { background: "#fff", borderRadius: 16, margin: "10px 16px", border: `1px solid ${T.border}`, overflow: "hidden", boxShadow: "0 2px 8px #00000008" },
       row: { display: "flex", justifyContent: "space-between", alignItems: "center" },
@@ -1133,7 +1173,10 @@ function RapidDelivri() {
       { id: "drivers", icon: "🚗", label: "Drivers" },
       { id: "restaurants", icon: "🍴", label: "Restaurants" },
       { id: "customers", icon: "👥", label: "Customers" },
+      { id: "documents", icon: "🪪", label: "Documents" },
       { id: "orders", icon: "📦", label: "Orders" },
+      { id: "payments", icon: "💳", label: "Payments" },
+      { id: "support", icon: "🎧", label: "Support" },
     ];
 
     // PIN Login
@@ -1279,7 +1322,7 @@ function RapidDelivri() {
                   {pendingDrivers.length > 0 && (
                     <>
                       <div style={{ fontSize: 18, fontWeight: 800, padding: "20px 16px 8px" }}>🚗 Chofè ({pendingDrivers.length})</div>
-                      {pendingDrivers.map(d => (
+                      {allDrivers.map(d => (
                         <div key={d.id} style={as.card}>
                           <div style={{ padding: 20 }}>
                             <div style={{ fontWeight: 800, fontSize: 16 }}>{d.first_name} {d.last_name}</div>
@@ -1340,17 +1383,15 @@ function RapidDelivri() {
           {/* DRIVERS */}
           {adminTab === "drivers" && (
             <>
-              <div style={{ fontSize: 18, fontWeight: 800, padding: "20px 16px 8px" }}>🚗 Tout Chofè ({stats.drivers})</div>
+              <div style={{ fontSize: 18, fontWeight: 800, padding: "20px 16px 8px" }}>🚗 Tout Chofè ({allDrivers.length || stats.drivers})</div>
               {loading ? <div style={{ textAlign: "center", padding: 40 }}>⏳</div> :
-                pendingDrivers.concat(
-                  // Show approved drivers too
-                ).length === 0 && pendingDrivers.length === 0 ? (
+                allDrivers.length === 0 ? (
                   <div style={{ textAlign: "center", padding: 60, color: T.muted }}>
                     <div style={{ fontSize: 48 }}>🚗</div>
                     <div style={{ marginTop: 12 }}>Pa gen chofè toujou</div>
                   </div>
                 ) : (
-                  pendingDrivers.map(d => (
+                  allDrivers.map(d => (
                     <div key={d.id} style={as.card}>
                       <div style={{ padding: 20 }}>
                         <div style={as.row}>
@@ -1378,15 +1419,15 @@ function RapidDelivri() {
           {/* RESTAURANTS */}
           {adminTab === "restaurants" && (
             <>
-              <div style={{ fontSize: 18, fontWeight: 800, padding: "20px 16px 8px" }}>🍴 Tout Restoran ({stats.restaurants})</div>
+              <div style={{ fontSize: 18, fontWeight: 800, padding: "20px 16px 8px" }}>🍴 Tout Restoran ({allRestaurants.length || stats.restaurants})</div>
               {loading ? <div style={{ textAlign: "center", padding: 40 }}>⏳</div> :
-                pendingRestaurants.length === 0 ? (
+                allRestaurants.length === 0 ? (
                   <div style={{ textAlign: "center", padding: 60, color: T.muted }}>
                     <div style={{ fontSize: 48 }}>🍴</div>
                     <div style={{ marginTop: 12 }}>Pa gen restoran toujou</div>
                   </div>
                 ) : (
-                  pendingRestaurants.map(r => (
+                  allRestaurants.map(r => (
                     <div key={r.id} style={as.card}>
                       <div style={{ padding: 20 }}>
                         <div style={as.row}>
@@ -1437,9 +1478,14 @@ function RapidDelivri() {
                         </div>
                         <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
                           <button style={as.btn(c.is_active ? T.accent : T.green)} onClick={() => toggleCustomer(c)}>
-                            {c.is_active ? "🚫 Bloke" : "✅ Debloke"}
+                            {c.is_active ? "🚫 Dezaktive" : "✅ Reaktive"}
                           </button>
-                          {c.id_document_url && <a href={c.id_document_url} target="_blank" style={{ ...as.btnOutline(T.primary), textDecoration: "none" }}>🪪 Wè ID</a>}
+                          <button style={as.btn(T.primary)} onClick={() => verifyCustomer(c)}>✅ Verifye</button>
+                        </div>
+                        <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+                          {c.id_document_url && <a href={c.id_document_url} target="_blank" style={{ ...as.btnOutline(T.primary), textDecoration: "none", fontSize: 11 }}>🪪 ID/Paspò/Lisans</a>}
+                          {c.selfie_url && <a href={c.selfie_url} target="_blank" style={{ ...as.btnOutline("#8B5CF6"), textDecoration: "none", fontSize: 11 }}>🤳 Selfie</a>}
+                          {!c.id_document_url && !c.selfie_url && <span style={{ color: T.muted, fontSize: 12 }}>Dokiman kliyan: ID/Paspò/Lisans + Selfie verification</span>}
                         </div>
                       </div>
                     </div>
@@ -1448,6 +1494,82 @@ function RapidDelivri() {
               }
             </>
           )}
+
+
+          {/* DOCUMENTS / VERIFICATION CENTER */}
+          {adminTab === "documents" && (
+            <>
+              <div style={{ padding: "20px 16px 8px" }}>
+                <div style={{ fontSize: 20, fontWeight: 900 }}>🪪 Verification Documents</div>
+                <div style={{ color: T.muted, fontSize: 13, marginTop: 4 }}>Admin sèlman ka wè dokiman prive yo. Nan production, lyen sa yo dwe sèvi ak signed URLs + authentication.</div>
+              </div>
+              {[
+                { title: "Driver Requirements", icon: "🚗", docs: ["Driver license", "Vehicle registration", "Vehicle insurance", "Vehicle year/make/model", "Selfie verification", "Pickup proof photo", "Delivery proof photo"] },
+                { title: "Restaurant Requirements", icon: "🍴", docs: ["EIN", "Business documents", "Menu management", "Stripe Connect onboarding"] },
+                { title: "Customer Requirements", icon: "👥", docs: ["ID / Passport / Driver License", "Selfie verification"] },
+              ].map(group => (
+                <div key={group.title} style={as.card}>
+                  <div style={{ padding: 18 }}>
+                    <div style={{ fontWeight: 900, fontSize: 16 }}>{group.icon} {group.title}</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 8, marginTop: 12 }}>
+                      {group.docs.map(doc => (
+                        <div key={doc} style={{ background: "#F8FAFF", border: `1px solid ${T.border}`, borderRadius: 10, padding: "10px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <span style={{ fontSize: 13, fontWeight: 700 }}>{doc}</span>
+                          <span style={{ fontSize: 11, color: T.primary, fontWeight: 800 }}>Required</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <div style={as.card}>
+                <div style={{ padding: 18 }}>
+                  <div style={{ fontWeight: 900 }}>🔐 Secure Media Rule</div>
+                  <div style={{ color: T.muted, fontSize: 13, marginTop: 6 }}>Driver licenses, IDs, selfies, insurance, vehicle registration, EIN/business documents, pickup proof photos, and delivery proof photos must be private and opened only by authenticated admin signed URLs.</div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* PAYMENTS / PAYOUTS / REFUNDS / DISPUTES */}
+          {adminTab === "payments" && (
+            <>
+              <div style={{ fontSize: 18, fontWeight: 800, padding: "20px 16px 8px" }}>💳 Payments, Payouts, Refunds & Disputes</div>
+              {[
+                { icon: "💳", title: "Stripe Connect Express", body: "Restaurant ak Chofè payout architecture pare pou Connect onboarding." },
+                { icon: "📅", title: "Weekly Payouts", body: "Admin ka kontwole payout chak semèn pou restoran ak chofè." },
+                { icon: "↩️", title: "Refund Management", body: "Admin ka make refund sou kòmand epi swiv status refund yo." },
+                { icon: "⚠️", title: "Dispute Management", body: "Admin ka ouvri/fè swivi dispute pou payment oswa delivery problem." },
+              ].map(item => (
+                <div key={item.title} style={as.card}>
+                  <div style={{ padding: 18, display: "flex", gap: 14 }}>
+                    <div style={{ fontSize: 28 }}>{item.icon}</div>
+                    <div>
+                      <div style={{ fontWeight: 900 }}>{item.title}</div>
+                      <div style={{ color: T.muted, fontSize: 13, marginTop: 4 }}>{item.body}</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+
+          {/* SUPPORT CENTER */}
+          {adminTab === "support" && (
+            <>
+              <div style={{ fontSize: 18, fontWeight: 800, padding: "20px 16px 8px" }}>🎧 Support Tickets</div>
+              <div style={as.card}>
+                <div style={{ padding: 18 }}>
+                  <div style={{ fontWeight: 900 }}>Inbox Support</div>
+                  <div style={{ color: T.muted, fontSize: 13, marginTop: 6 }}>Admin dashboard prepare pou ticket kliyan, chofè, restoran, refund, payout, ak dispute.</div>
+                  <div style={{ marginTop: 12, background: "#F8FAFF", borderRadius: 10, padding: 12, color: T.muted, fontSize: 13 }}>
+                    Pa gen ticket pou kounye a.
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
 
           {/* ORDERS */}
           {adminTab === "orders" && (
@@ -1469,6 +1591,11 @@ function RapidDelivri() {
                         </div>
                         <div style={{ color: T.muted, fontSize: 13, marginTop: 4 }}>
                           {o.order_type} • {o.status} • {new Date(o.created_at).toLocaleDateString()}
+                        </div>
+                        <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
+                          <button style={as.btn(T.accent)} onClick={() => refundOrder(o)}>↩️ Refund</button>
+                          <button style={as.btn(T.green)} onClick={() => markPayoutPaid(o)}>💸 Payout Paid</button>
+                          <button style={as.btn("#F59E0B")} onClick={() => flagDispute(o)}>⚠️ Dispute</button>
                         </div>
                       </div>
                     </div>
