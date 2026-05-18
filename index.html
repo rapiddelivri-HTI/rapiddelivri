@@ -1361,6 +1361,7 @@ function RapidDelivri() {
 
         </div>
         <Toast notif={notif} />
+      </div>
     );
   }
 if (screen === "restaurant") return (
@@ -1543,8 +1544,7 @@ if (screen === "restaurant") return (
           </div>
         )}
       </div>
-            </div>
-<Toast notif={notif} />
+      <Toast notif={notif} />
     </div>
   );
 
@@ -1597,6 +1597,7 @@ if (screen === "restaurant") return (
           <div style={{ padding: "8px 16px" }}>
             <button className="btn-press" style={s.btnOutline} onClick={() => setScreen("home")}>{L.backHome}</button>
           </div>
+        </div>
       </div>
     );
   }
@@ -1636,6 +1637,7 @@ if (screen === "restaurant") return (
                 ))}
               </div>
             </div>
+          </div>
         )}
 
         <div style={s.card}>
@@ -1662,7 +1664,9 @@ if (screen === "restaurant") return (
               Powered by <span style={{ color: T.primary, fontWeight: 700 }}>Stripe</span> • Peman pwoteje
             </div>
           </div>
-<Toast notif={notif} />
+        </div>
+      </div>
+      <Toast notif={notif} />
     </div>
   );
 
@@ -1729,7 +1733,7 @@ if (screen === "restaurant") return (
     <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 16 }}>{L.driverTip}</div>
     <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
       {DRIVER_TIPS.map((t) => (
-        <button>
+        <button
           key={t}
           className="btn-press"
           onClick={() => setTip(t)}
@@ -1763,14 +1767,14 @@ if (screen === "restaurant") return (
                 <span style={{ color: T.muted, fontSize: 14 }}>{label}</span>
                 <span style={{ color, fontSize: 14 }}>${Number(val).toFixed(2)}</span>
               </div>
-              ))}
-              </div>
+            ))}
             <div style={{ height: 1, background: T.border, margin: "12px 0" }} />
             <div style={s.row}>
               <span style={{ fontWeight: 900, fontSize: 18 }}>{L.grandTotal}</span>
               <span style={{ fontWeight: 900, fontSize: 26, color: T.accent }}>${grandTotal.toFixed(2)}</span>
             </div>
-            </div>
+          </div>
+        </div>
         {/* Revenue split */}
         <div style={{ margin: "0 16px 16px", background: "#0D1527", borderRadius: 14, padding: 16, border: `1px solid #1a2a4a` }}>
           <div style={{ fontSize: 11, color: T.muted, fontWeight: 700, letterSpacing: "0.8px", marginBottom: 12 }}>{L.distribution}</div>
@@ -1790,7 +1794,9 @@ if (screen === "restaurant") return (
             {L.stripeBtn(grandTotal.toFixed(2))}
           </button>
         </div>
-        </div>
+      </div>
+      <Toast notif={notif} />
+    </div>
   );
   // ── MENU ──────────────────────────────────────────────────────────────────
   if (screen === "menu" && selectedRestaurant) return (
@@ -1847,6 +1853,7 @@ if (screen === "restaurant") return (
             </button>
           </div>
         )}
+      </div>
       <Toast notif={notif} />
     </div>
   );
@@ -1977,9 +1984,13 @@ if (screen === "restaurant") return (
       </div>
     </div>
   ))}
+  </div>
   <Toast notif={notif} />
 </div>
 );
 }
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(<RapidDelivri />);
+</script>
+</body>
+</html>
